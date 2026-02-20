@@ -12,7 +12,7 @@ export default async function handler(
       return res.status(405).json({ message: "Method not allowed" })
     }
 
-   const user = await verifyRole(req, res, ["ADMIN"]);
+   const user = await verifyRole(req, res, ["USER"]);
 
 
     if (!user) {

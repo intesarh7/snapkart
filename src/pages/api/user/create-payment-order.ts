@@ -56,7 +56,7 @@ export default async function handler(
     /* ================= CREATE CASHFREE ORDER ================= */
 
     const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_BASE_URL || "https://snapkart-mu.vercel.app/";
 
     const cashfreeRes = await fetch(
       process.env.CASHFREE_ENV === "PROD"
