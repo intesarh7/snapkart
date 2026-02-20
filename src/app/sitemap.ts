@@ -1,51 +1,61 @@
 import type { MetadataRoute } from "next";
+import { prisma } from "@/lib/prisma";
+
+export const revalidate = 3600; 
+// ⬆️ Rebuild sitemap every 1 hour (SEO friendly + cache efficient)
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://snapkart.in";
-
-  let products: any[] = [];
-  let restaurants: any[] = [];
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+    "https://snapkart.in";
 
   try {
-    const productRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/api/products`,
-      { cache: "no-store" }
-    );
+    // 🔥 Direct DB access (NO internal API fetch)
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      select: { id: true, slug: true, updatedAt: true },
+    });
 
-    const restaurantRes = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/api/restaurants`,
-      { cache: "no-store" }
-    );
+    const restaurants = await prisma.restaurant.findMany({
+      where: { isActive: true },
+      select: { id: true, slug: true, updatedAt: true },
+    });
 
-    products = productRes.ok ? await productRes.json() : [];
-    restaurants = restaurantRes.ok ? await restaurantRes.json() : [];
+    const productUrls = products.map((p) => ({
+      url: `${baseUrl}/product/${p.slug || p.id}`,
+      lastModified: p.updatedAt || new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+    const restaurantUrls = restaurants.map((r) => ({
+      url: `${baseUrl}/restaurant/${r.slug || r.id}`,
+      lastModified: r.updatedAt || new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+
+    return [
+      {
+        url: baseUrl,
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 1,
+      },
+      ...productUrls,
+      ...restaurantUrls,
+    ];
   } catch (error) {
-    console.error("Sitemap fetch error:", error);
+    console.error("Sitemap generation error:", error);
+
+    // Fail-safe: At least homepage return ho
+    return [
+      {
+        url: baseUrl,
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 1,
+      },
+    ];
   }
-
-  const productUrls =
-    Array.isArray(products)
-      ? products.map((p) => ({
-          url: `${baseUrl}/product/${p.slug || p.id}`,
-          lastModified: new Date(),
-        }))
-      : [];
-
-  const restaurantUrls =
-    Array.isArray(restaurants)
-      ? restaurants.map((r) => ({
-          url: `${baseUrl}/restaurant/${r.slug || r.id}`,
-          lastModified: new Date(),
-        }))
-      : [];
-
-  return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-    },
-    ...productUrls,
-    ...restaurantUrls,
-  ];
 }
