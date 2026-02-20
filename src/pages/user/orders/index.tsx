@@ -79,6 +79,7 @@ export default function MyOrders() {
       const res = await fetch("/api/payment/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           referenceType: "ORDER",
           referenceId: orderId,
