@@ -95,7 +95,7 @@ export default function MyOrders() {
 
       const cashfree = await load({
         mode:
-          process.env.NEXT_PUBLIC_CASHFREE_MODE === "PROD"
+          process.env.NEXT_PUBLIC_CASHFREE_MODE === "PRODUCTION"
             ? "production"
             : "sandbox",
       });
