@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
-export const revalidate = 3600; 
-// ⬆️ Rebuild sitemap every 1 hour (SEO friendly + cache efficient)
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl =
@@ -10,37 +9,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "https://snapkart.in";
 
   try {
-    // 🔥 Direct DB access (NO internal API fetch)
     const products = await prisma.product.findMany({
       where: { isActive: true },
-      select: { id: true, slug: true, updatedAt: true },
+      select: { id: true, updatedAt: true }, // 🔥 slug removed
     });
 
     const restaurants = await prisma.restaurant.findMany({
       where: { isActive: true },
-      select: { id: true, slug: true, updatedAt: true },
+      select: { id: true, updatedAt: true }, // 🔥 slug removed
     });
 
     const productUrls = products.map((p) => ({
-      url: `${baseUrl}/product/${p.slug || p.id}`,
-      lastModified: p.updatedAt || new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
+      url: `${baseUrl}/product/${p.id}`,
+      lastModified: p.updatedAt ?? new Date(),
     }));
 
     const restaurantUrls = restaurants.map((r) => ({
-      url: `${baseUrl}/restaurant/${r.slug || r.id}`,
-      lastModified: r.updatedAt || new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
+      url: `${baseUrl}/restaurant/${r.id}`,
+      lastModified: r.updatedAt ?? new Date(),
     }));
 
     return [
       {
         url: baseUrl,
         lastModified: new Date(),
-        changeFrequency: "daily",
-        priority: 1,
       },
       ...productUrls,
       ...restaurantUrls,
@@ -48,13 +40,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch (error) {
     console.error("Sitemap generation error:", error);
 
-    // Fail-safe: At least homepage return ho
     return [
       {
         url: baseUrl,
         lastModified: new Date(),
-        changeFrequency: "daily",
-        priority: 1,
       },
     ];
   }
