@@ -111,8 +111,9 @@ export const verifyRole = async (
     res.status(401).json({ message: "Unauthorized" });
     return null;
   }
+  const normalizedRole = user.role?.toUpperCase();
 
-  if (!allowedRoles.includes(user.role as UserRole)) {
+  if (!allowedRoles.includes(normalizedRole as UserRole)) {
     res.status(403).json({ message: "Access Denied" });
     return null;
   }
