@@ -61,30 +61,30 @@ export default async function handler(req, res) {
     let subtotal = 0;
 
     for (const item of cartItems) {
-  const product = products.find((p) => p.id === item.productId);
-  if (!product) continue;
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) continue;
 
-  let price = product.finalPrice;
+      let price = product.finalPrice;
 
-  let variantId = item.variantId || null;
+      let variantId = item.variantId || null;
 
-  if (variantId) {
-    const variant = product.variants.find(v => v.id === variantId);
-    if (variant) price = variant.finalPrice || variant.price;
-  }
+      if (variantId) {
+        const variant = product.variants.find(v => v.id === variantId);
+        if (variant) price = variant.finalPrice || variant.price;
+      }
 
-  // 🔥 ADD EXTRAS PRICE
-  let extrasTotal = 0;
+      // 🔥 ADD EXTRAS PRICE
+      let extrasTotal = 0;
 
-  if (Array.isArray(item.extras)) {
-    extrasTotal = item.extras.reduce(
-      (sum, ex) => sum + Number(ex.price || 0),
-      0
-    );
-  }
+      if (Array.isArray(item.extras)) {
+        extrasTotal = item.extras.reduce(
+          (sum, ex) => sum + Number(ex.price || 0),
+          0
+        );
+      }
 
-  subtotal += (price + extrasTotal) * item.quantity;
-}
+      subtotal += (price + extrasTotal) * item.quantity;
+    }
 
     /* ---------------- DELIVERY ---------------- */
     const { userLat, userLng } = req.body;
@@ -170,41 +170,44 @@ export default async function handler(req, res) {
           paymentMethod: paymentMethod || "COD",
           paymentStatus: "PENDING",
           status: "PENDING",
-          
-            items: {
-  create: cartItems.map((item) => {
-    const product = products.find(p => p.id === item.productId);
 
-    let price = product.finalPrice;
-    let variantId = item.variantId || null;
+          items: {
+            create: cartItems.map((item) => {
+              const product = products.find(p => p.id === item.productId);
 
-    if (variantId) {
-      const variant = product.variants.find(v => v.id === variantId);
-      if (variant) price = variant.finalPrice || variant.price;
-    }
+              let price = product.finalPrice;
+              let variantId = item.variantId || null;
 
-    // 🔥 CALCULATE EXTRAS
-    let extrasTotal = 0;
-    let selectedExtras = [];
+              if (variantId) {
+                const variant = product.variants.find(v => v.id === variantId);
+                if (variant) price = variant.finalPrice || variant.price;
+              }
 
-    if (Array.isArray(item.extras)) {
-      selectedExtras = item.extras;
-      extrasTotal = item.extras.reduce(
-        (sum, ex) => sum + Number(ex.price || 0),
-        0
-      );
-    }
+              // 🔥 CALCULATE EXTRAS
+              let extrasTotal = 0;
+              let selectedExtras = [];
 
-    return {
-      productId: product.id,
-      variantId: variantId,              // ✅ SAVE VARIANT
-      quantity: item.quantity,
-      price: round(price + extrasTotal), // ✅ SAVE FINAL ITEM PRICE
-      selectedExtras: selectedExtras     // ✅ SAVE EXTRAS
-    };
-  }),
-},
-          
+              if (Array.isArray(item.extras)) {
+                selectedExtras = item.extras;
+                extrasTotal = item.extras.reduce(
+                  (sum, ex) => sum + Number(ex.price || 0),
+                  0
+                );
+              }
+
+              return {
+                productId: product.id,
+                variantId: variantId,
+                quantity: item.quantity,
+                price: round(price + extrasTotal),
+
+                // ✅ FIXED HERE
+                selectedExtras: selectedExtras.length
+                  ? JSON.stringify(selectedExtras)
+                  : null,
+              };
+            }),
+          },
         },
       });
 
