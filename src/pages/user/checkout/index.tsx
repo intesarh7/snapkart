@@ -321,7 +321,7 @@ export default function CheckoutPage() {
 
       // 3️⃣ Load Cashfree SDK
       const cashfree = await load({
-        mode: process.env.NEXT_PUBLIC_CASHFREE_MODE === "PROD"
+        mode: process.env.NEXT_PUBLIC_CASHFREE_MODE === "PRODUCTION"
           ? "production"
           : "sandbox",
       });
