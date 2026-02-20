@@ -102,15 +102,21 @@ type UserRole = "ADMIN" | "USER" | "DELIVERY";
 
 export const verifyRole = async (
   req: NextApiRequest,
+  res: NextApiResponse,
   allowedRoles: UserRole[]
 ) => {
   const user = await getUserFromRequest(req);
 
-  if (!user) return null;
+  if (!user) {
+    res.status(401).json({ message: "Unauthorized" });
+    return null;
+  }
 
   if (!allowedRoles.includes(user.role as UserRole)) {
+    res.status(403).json({ message: "Access Denied" });
     return null;
   }
 
   return user;
 };
+
