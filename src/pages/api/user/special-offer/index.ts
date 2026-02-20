@@ -1,0 +1,11 @@
+import { prisma } from "@/lib/prisma";
+import type { NextApiRequest, NextApiResponse } from "next";
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const offers = await prisma.specialOffer.findMany({
+    where: { active: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.status(200).json(offers);
+}

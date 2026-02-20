@@ -1,0 +1,588 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  phone        String        @unique
+  password     String
+  image        String?
+  couponUsages CouponUsage[]
+  addresses    Address[]
+
+  orders           Order[]           @relation("CustomerOrders")
+  deliveryEarnings DeliveryEarning[] @relation("UserDeliveryEarnings")
+  deliveryOrders   Order[]           @relation("DeliveryBoyOrders")
+
+  // ✅ ADDED: Opposite relation for Payment.user
+  payments Payment[]
+
+  isAvailable Boolean @default(true)
+
+  bookings TableBooking[]
+
+  maxActiveOrders Int @default(1)
+  minActiveOrders Int @default(0)
+
+  commissionType  String? // "PERCENTAGE" or "FLAT"
+  commissionValue Float? // 10 (%) OR 30 (₹)
+
+  role               Role      @default(USER)
+  isActive           Boolean   @default(true)
+  otp                String?
+  otpExpiry          DateTime?
+  latitude           Float?
+  longitude          Float?
+  lastLocationUpdate DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+enum Role {
+  ADMIN
+  USER
+  DELIVERY
+}
+
+model Restaurant {
+  id            Int            @id @default(autoincrement())
+  name          String
+  deliveryRules DeliveryRule[]
+  address       String
+  city          String         @default("Unknown")
+  latitude      Float
+  longitude     Float
+  image         String?
+
+  openTime     String? // e.g. "09:00 AM"
+  closeTime    String? // e.g. "11:00 PM"
+  rating       Float?  @default(0)
+  deliveryTime String? // minutes (e.g. 30)
+  addOffer     String? // e.g. "20% OFF Today"
+
+  isActive       Boolean                   @default(true)
+  isOpen         Boolean                   @default(true)
+  categories     Category[]
+  products       Product[]
+  tables         RestaurantTable[]
+  bookings       TableBooking[]
+  bookingSetting RestaurantBookingSetting?
+  orders         Order[]
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+}
+
+model RestaurantBookingSetting {
+  id Int @id @default(autoincrement())
+
+  restaurantId Int        @unique
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  isBookingEnabled Boolean @default(false)
+
+  advanceRequired Boolean      @default(false)
+  advanceType     AdvanceType?
+  advanceValue    Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AdvanceType {
+  PERCENTAGE
+  FLAT
+}
+
+model TableBooking {
+  id Int @id @default(autoincrement())
+
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  tableId Int?
+  table   RestaurantTable? @relation(fields: [tableId], references: [id])
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bookingDate DateTime
+  bookingTime String
+  guests      Int
+  location    TableLocation?
+
+  specialNote String?
+
+  status BookingStatus @default(PENDING)
+
+  advanceAmount Float?
+  isAdvancePaid Boolean @default(false)
+
+  preOrderedProducts BookingProduct[]
+
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  bookingNotifications BookingNotification[]
+}
+
+enum BookingStatus {
+  PENDING
+  AWAITING_PAYMENT
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+model BookingNotification {
+  id Int @id @default(autoincrement())
+
+  bookingId Int
+  booking   TableBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model RestaurantTable {
+  id Int @id @default(autoincrement())
+
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  tableNumber String
+  capacity    Int
+  location    TableLocation
+
+  isActive Boolean @default(true)
+
+  bookings TableBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TableLocation {
+  INSIDE
+  OUTSIDE
+}
+
+model BookingProduct {
+  id Int @id @default(autoincrement())
+
+  bookingId Int
+  booking   TableBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity Int
+
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id              Int              @id @default(autoincrement())
+  name            String
+  description     String
+  image           String?
+  category        String
+  categoryId      Int?
+  categoryRef     Category?        @relation(fields: [categoryId], references: [id])
+  isAvailable     Boolean          @default(true)
+  isActive        Boolean          @default(true)
+  price           Float
+  offerType       String?
+  offerValue      Float?
+  extraType       String?
+  extraValue      Float?
+  finalPrice      Float
+  rating          Float            @default(0)
+  restaurantId    Int
+  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id])
+  variants        ProductVariant[]
+  extras          ProductExtra[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  orderItems      OrderItem[]
+  bookingProducts BookingProduct[]
+
+  @@index([restaurantId])
+  @@index([categoryId])
+}
+
+model Category {
+  id           Int        @id @default(autoincrement())
+  name         String
+  image        String?
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  products     Product[]
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Offer {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  type        OfferType
+  value       Float
+  isPopup     Boolean   @default(false)
+  isMarquee   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum OfferType {
+  PERCENTAGE
+  FLAT
+}
+
+model Coupon {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?
+  code        String     @unique
+  type        CouponType
+  value       Float
+
+  isActive  Boolean   @default(true)
+  expiresAt DateTime?
+
+  usageLimit Int?
+  usedCount  Int  @default(0)
+
+  oneTimePerUser Boolean @default(false)
+
+  usages CouponUsage[]
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CouponType {
+  PERCENTAGE
+  FLAT
+}
+
+model CouponUsage {
+  id        Int      @id @default(autoincrement())
+  couponId  Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, userId])
+}
+
+model DeliveryRule {
+  id    Int    @id @default(autoincrement())
+  title String
+
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  minOrder Float
+  maxOrder Float?
+
+  minDistance Float
+  maxDistance Float?
+
+  chargeType   ChargeType
+  chargeAmount Float
+
+  baseDistance Float?
+  perKmCharge  Float?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ChargeType {
+  FREE
+  FLAT
+}
+
+model Order {
+  id           Int        @id @default(autoincrement())
+  orderNumber  String     @unique
+  userId       Int
+  user         User       @relation("CustomerOrders", fields: [userId], references: [id])
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  addressId    Int
+  address      Address    @relation(fields: [addressId], references: [id])
+
+  totalAmount    Float
+  deliveryCharge Float
+  discount       Float @default(0)
+  finalAmount    Float
+
+  couponId Int?
+  coupon   Coupon? @relation(fields: [couponId], references: [id])
+
+  couponCode     String?
+  couponDiscount Float   @default(0)
+
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
+
+  payments Payment[] @relation("OrderPayments") // already correct
+
+  transactionId   String?
+  paymentGateway  String?
+  paymentIntentId String?
+  paidAt          DateTime?
+
+  cancelledByRole Role?
+  cancelReason    String?
+  cancelledAt     DateTime?
+
+  refundAmount Float?
+  refundStatus PaymentStatus?
+  refundedAt   DateTime?
+
+  statusHistory OrderStatusHistory[]
+  canUserCancel Boolean              @default(true)
+
+  deliveryBoyId    Int?
+  deliveryBoy      User?             @relation("DeliveryBoyOrders", fields: [deliveryBoyId], references: [id])
+  deliveryEarnings DeliveryEarning[] @relation("OrderDeliveryEarnings")
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([restaurantId])
+  @@index([deliveryBoyId])
+  @@index([status])
+}
+
+model OrderItem {
+  id             Int             @id @default(autoincrement())
+  orderId        Int
+  order          Order           @relation(fields: [orderId], references: [id])
+  productId      Int
+  product        Product         @relation(fields: [productId], references: [id])
+  variantId      Int?
+  variant        ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity       Int
+  price          Float
+  selectedExtras Json?
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Address {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  fullName  String
+  phone     String
+  address   String
+  orders    Order[]
+  city      String
+  state     String
+  pincode   String
+  latitude  Float
+  longitude Float
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderStatusHistory {
+  id            Int         @id @default(autoincrement())
+  orderId       Int
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status        OrderStatus
+  note          String?
+  changedByRole Role
+  createdAt     DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model Payment {
+  id Int @id @default(autoincrement())
+
+  referenceType PaymentReferenceType
+  referenceId   Int
+
+  // ✅ ADDED: Proper relation to Order
+  orderId Int?
+  order   Order? @relation("OrderPayments", fields: [orderId], references: [id])
+
+  bookingId Int?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  amount   Float
+  currency String @default("INR")
+
+  paymentGateway   String  @default("CASHFREE")
+  gatewayOrderId   String?
+  transactionId    String?
+  paymentSessionId String?
+
+  status PaymentStatus @default(PENDING)
+
+  paidAt        DateTime?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referenceType, referenceId])
+  @@index([userId])
+  @@index([orderId]) // ✅ ADDED for performance
+}
+
+enum PaymentReferenceType {
+  ORDER
+  BOOKING
+}
+
+model DeliveryEarning {
+  id            Int      @id @default(autoincrement())
+  orderId       Int
+  deliveryBoyId Int
+  orderAmount   Float
+  earningAmount Float
+  createdAt     DateTime @default(now())
+
+  order       Order @relation("OrderDeliveryEarnings", fields: [orderId], references: [id])
+  deliveryBoy User  @relation("UserDeliveryEarnings", fields: [deliveryBoyId], references: [id])
+}
+
+model Featured {
+  id        Int      @id @default(autoincrement())
+  title     String
+  tag       String?
+  price     Float?
+  image     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SpecialOffer {
+  id         Int      @id @default(autoincrement())
+  title      String
+  priceText  String?
+  buttonText String?
+  buttonLink String?
+  image      String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Page {
+  id              Int      @id @default(autoincrement())
+  slug            String   @unique
+  title           String
+  content         String   @db.LongText
+  metaTitle       String?
+  metaDescription String?  @db.LongText
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Newsletter {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model WebsiteSetting {
+  id Int @id @default(autoincrement())
+
+  contactNumber String?
+  email         String?
+  address       String?
+
+  facebook  String?
+  instagram String?
+  twitter   String?
+  youtube   String?
+
+  headerLogo String?
+  footerLogo String?
+
+  footerInfo String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductVariant {
+  id         Int     @id @default(autoincrement())
+  name       String
+  price      Float
+  finalPrice Float
+  isActive   Boolean @default(true)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model ProductExtra {
+  id       Int     @id @default(autoincrement())
+  name     String
+  price    Float
+  isActive Boolean @default(true)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}

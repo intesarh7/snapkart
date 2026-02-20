@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `coupon` ADD COLUMN `oneTimePerUser` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `usageLimit` INTEGER NULL,
+    ADD COLUMN `usedCount` INTEGER NOT NULL DEFAULT 0;

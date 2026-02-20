@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `user` ADD COLUMN `maxActiveOrders` INTEGER NOT NULL DEFAULT 1,
+    ADD COLUMN `minActiveOrders` INTEGER NOT NULL DEFAULT 0;
