@@ -4,18 +4,26 @@ import { cashfreeApi } from "@/lib/payment/cashfree"
 
 
 export async function createPaymentSession(payload: CreatePaymentPayload) {
+
+  
+  
   const { userId, referenceType, referenceId } = payload
 
   // 🔒 Always fetch amount from DB
   let amount = 0
 
-  if (referenceType === "ORDER") {
-    const order = await prisma.order.findUnique({
-      where: { id: referenceId }
-    })
-    if (!order) throw new Error("Order not found")
-    amount = order.finalAmount
-  }
+if (referenceType === "ORDER") {
+  const order = await prisma.order.findUnique({
+    where: { id: referenceId }
+  })
+  if (!order) throw new Error("Order not found")
+
+  amount = order.finalAmount
+}
+
+if (!amount || amount <= 0) {
+  throw new Error("Invalid payment amount")
+}
 
   if (referenceType === "BOOKING") {
     const booking: any = await prisma.$queryRawUnsafe(
@@ -43,6 +51,7 @@ export async function createPaymentSession(payload: CreatePaymentPayload) {
   order_amount: amount,
   order_currency: "INR",
   order_id: `SNAP_${payment.id}_${Math.floor(Math.random()*10000)}`,
+  order_note: `SnapKart Payment ${payment.id}`,
   customer_details: {
     customer_id: userId.toString(),
     customer_email: "test@snapkart.com",
@@ -57,7 +66,13 @@ export async function createPaymentSession(payload: CreatePaymentPayload) {
     gatewayOrderId: cfOrder.data.order_id,
     paymentSessionId: cfOrder.data.payment_session_id
   }
+  
 })
+console.log("Cashfree Response:", cfOrder.data);
+if (!cfOrder.data.payment_session_id) {
+  console.error("Cashfree Full Response:", cfOrder.data)
+  throw new Error("Failed to generate payment session")
+}
   return {
     paymentSessionId: cfOrder.data.payment_session_id,
     paymentId: payment.id
