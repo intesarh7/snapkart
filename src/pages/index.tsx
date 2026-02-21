@@ -563,13 +563,13 @@ leading-snug">
                     {/* IMAGE */}
                     {item.image && (
                       <Image
-  src={getCloudinaryUrl(item.image, 500, 500)}
-  alt={item.title}
-  width={300}
-  height={300}
-  className="absolute bottom-0 right-0 w-44 object-contain"
-  loading="lazy"
-/>
+                        src={getCloudinaryUrl(item.image, 500, 500)}
+                        alt={item.title}
+                        width={300}
+                        height={300}
+                        className="absolute bottom-0 right-0 w-44 object-contain"
+                        loading="lazy"
+                      />
                     )}
 
                   </div>
@@ -599,35 +599,19 @@ leading-snug">
 
 
         {/* ================= RESTAURANTS ================= */}
-        <section className="max-w-7xl mx-auto px-3 py-20">
+        <section className="max-w-7xl mx-auto px-3 py-10">
 
           {/* Header */}
           <div className="flex items-center justify-between mb-14">
 
             <div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl
-font-bold
-relative inline-block">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold relative inline-block">
                 Most Visited Restaurants
                 <span className="absolute -bottom-3 left-0 w-10 h-1 bg-[#FF6B00] rounded-full"></span>
               </h2>
             </div>
 
-            <Link
-              href="/user/restaurants"
-              className="flex items-center gap-2
-px-4 sm:px-6
-py-2.5 sm:py-3
-rounded-xl
-border border-gray-300
-text-sm sm:text-base
-font-medium
-bg-white
-hover:bg-black hover:text-white
-active:scale-95
-focus:outline-none focus:ring-2 focus:ring-black/20
-transition-all duration-300 ease-out"
-            >
+            <Link href="/user/restaurants" className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-gray-300 text-sm sm:text-base font-medium bg-white hover:bg-black hover:text-white active:scale-95 focus:outline-none focus:ring-2 focus:ring-black/20 transition-all duration-300 ease-out">
               See All →
             </Link>
 
@@ -654,13 +638,13 @@ transition-all duration-300 ease-out"
                     <div className="relative">
 
                       <Image
-  src={getCloudinaryUrl(r.image, 800, 500)}
-  alt={r.name}
-  width={800}
-  height={500}
-  className="w-full h-52 object-cover"
-  loading="lazy"
-/>
+                        src={getCloudinaryUrl(r.image, 800, 500)}
+                        alt={r.name}
+                        width={800}
+                        height={500}
+                        className="w-full h-52 object-cover"
+                        loading="lazy"
+                      />
 
                       {/* Offer Badge */}
                       <span className="absolute top-4 left-4 bg-[#FF4D00] text-white text-xs px-3 py-1 rounded-md font-medium shadow">
@@ -744,35 +728,19 @@ transition-all duration-300 ease-out"
 
 
         {/* ================= TRENDING DISHES ================= */}
-        <section className="bg-gray-50 py-20">
+        <section className="bg-gray-50 py-10">
           <div className="max-w-7xl mx-auto px-3">
 
             {/* Header */}
             <div className="flex items-center justify-between mb-14">
               <div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl
-font-bold
-relative inline-block">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold relative inline-block">
                   Super Delicious Deals
                   <span className="absolute -bottom-3 left-0 w-10 h-1 bg-[#FF6B00] rounded-full"></span>
                 </h2>
               </div>
 
-              <Link
-                href="/user/products"
-                className="flex items-center gap-2
-px-4 sm:px-6
-py-2.5 sm:py-3
-rounded-xl
-border border-gray-300
-text-sm sm:text-base
-font-medium
-bg-white
-hover:bg-black hover:text-white
-active:scale-95
-focus:outline-none focus:ring-2 focus:ring-black/20
-transition-all duration-300 ease-out"
-              >
+              <Link href="/user/products" className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-gray-300 text-sm sm:text-base font-medium bg-white hover:bg-black hover:text-white active:scale-95 focus:outline-none focus:ring-2 focus:ring-black/20 transition-all duration-300 ease-out">
                 View All
               </Link>
             </div>
@@ -825,13 +793,13 @@ transition-all duration-300 ease-out"
                       <div className="relative">
 
                         <Image
-  src={getCloudinaryUrl(p.image, 800, 500)}
-  alt={p.name}
-  width={800}
-  height={500}
-  className="w-full h-52 object-cover"
-  loading="lazy"
-/>
+                          src={getCloudinaryUrl(p.image, 800, 500)}
+                          alt={p.name}
+                          width={800}
+                          height={500}
+                          className="w-full h-52 object-cover"
+                          loading="lazy"
+                        />
 
                         {/* Offer Badges */}
                         <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -992,19 +960,19 @@ transition-all duration-300 ease-out"
 
         {/* ================= BIG PROMO STATIC SECTION ================= */}
         {offers.map((offer) => (
-          <section key={offer.id} className="relative h-100 flex items-center mb-20 overflow-hidden">
+          <section key={offer.id} className="relative h-100 flex items-center mb-10 overflow-hidden">
 
-  <Image
-    src={getCloudinaryUrl(offer.image, 1600, 900)}
-    alt={offer.title}
-    fill
-    className="object-cover"
-    priority={false}
-  />
+            <Image
+              src={getCloudinaryUrl(offer.image, 1600, 900)}
+              alt={offer.title}
+              fill
+              className="object-cover"
+              priority={false}
+            />
 
-  <div className="absolute inset-0 bg-black/60"></div>
+            <div className="absolute inset-0 bg-black/60"></div>
 
-  <div className="relative z-10 max-w-6xl mx-auto px-6 text-white">
+            <div className="relative z-10 max-w-6xl mx-auto px-6 text-white">
               <h2 className="text-4xl font-bold mb-3">
                 {offer.title}
               </h2>

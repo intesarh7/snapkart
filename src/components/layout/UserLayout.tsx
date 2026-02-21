@@ -83,7 +83,7 @@ export default function UserLayout({ children, settings }: LayoutProps) {
   return (
      
     <TableBookingProvider>
-    <div className="min-h-screen flex flex-col bg-gray-50 relative">
+    <div className="min-h-screen flex flex-col bg-gray-50 relative pb-16 md:pb-0">
       {/* 🔄 Refresh Indicator */}
       {isRefreshing && (
         <div className="fixed top-0 left-0 w-full text-center py-2 text-sm font-medium text-white z-50">

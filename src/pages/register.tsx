@@ -106,6 +106,7 @@ export default function Register() {
 
       {/* LEFT FOOD IMAGE */}
       <div className="hidden lg:block absolute -left-20 top-0">
+        
         <Image
           src="/images/food-left.png"   // 🔁 Replace with your PNG
           alt="Food"
@@ -113,6 +114,7 @@ export default function Register() {
           height={300}
           className="opacity-90"
         />
+        
       </div>
 
       {/* RIGHT FOOD IMAGE */}
@@ -129,7 +131,8 @@ export default function Register() {
       <div className="bg-white/90 backdrop-blur-lg w-full max-w-md p-8 rounded-3xl shadow-2xl border border-white">
 
         {/* LOGO IMAGE */}
-        <div className="hidden lg:block">
+        <div className="lg:block">
+          <Link href="/">
           <Image
             src="/logo.png"   // 🔁 Replace with your PNG
             alt="Food"
@@ -137,6 +140,7 @@ export default function Register() {
             height={100}
             className="opacity-90 m-auto mb-5"
           />
+          </Link>
         </div>
 
         <h2 className="text-2xl font-bold mb-6 text-center">

@@ -39,9 +39,9 @@ export default function Footer({ settings }: FooterProps) {
   }, []);
 
   return (
-    <footer className="hidden md:block bg-[#111111] text-white pt-20 pb-10 mt-20">
+    <footer className="md:block bg-[#111111] text-white pt-10 pb-0 mt-0">
 
-      <div className="max-w-7xl mx-auto px-8 grid md:grid-cols-4 gap-12">
+      <div className="max-w-7xl mx-auto px-5 grid md:grid-cols-4 gap-8 text-center sm:text-left">
 
         {/* ================= BRAND ================= */}
         <div>
@@ -49,7 +49,7 @@ export default function Footer({ settings }: FooterProps) {
             <img
               src={settings.footerLogo}
               alt="SnapKart"
-              className="h-10 mb-4"
+              className="h-24 mb-4 w-30 m-auto"
             />
           ) : (
             <h2 className="text-3xl font-extrabold mb-4">
@@ -188,7 +188,7 @@ export default function Footer({ settings }: FooterProps) {
       </div>
 
       {/* ================= BOTTOM COPYRIGHT ================= */}
-      <div className="border-t border-white/10 mt-16 pt-6 text-center text-gray-500 text-sm">
+      <div className="border-t border-white/10 mt-5 pt-3 pb-3 text-center text-gray-500 text-sm">
         © {year || ""} SnapKart. All rights reserved.
       </div>
 

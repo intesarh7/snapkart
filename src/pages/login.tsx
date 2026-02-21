@@ -113,7 +113,9 @@ export default function Login() {
       {/* LOGIN CARD */}
       <div className="bg-white/90 backdrop-blur-lg w-full max-w-md p-8 rounded-3xl shadow-2xl border border-white">
         {/* LOGO IMAGE */}
-        <div className="hidden lg:block">
+        <div className="lg:block">
+          <Link href="/">
+           
           <Image
             src="/logo.png"   // 🔁 Replace with your PNG
             alt="Food"
@@ -121,6 +123,7 @@ export default function Login() {
             height={100}
             className="opacity-90 m-auto mb-5"
           />
+          </Link>
         </div>
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800">

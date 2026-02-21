@@ -22,106 +22,109 @@ export default function MobileNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { isLoggedIn } = useAuth();
-const { logout } = useAuth();
+  const { logout } = useAuth();
   const [mounted, setMounted] = useState(false);
- 
-  
+
+
 
   const totalItems = cartItems.reduce(
     (sum, item) => sum + (item.quantity || 1),
     0
   );
 
- const handleLogout = async () => {
-  await logout();
-  router.push("/login");
-};
+  /* ================= LOGOUT ================= */
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
 
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
   useEffect(() => {
-  setMounted(true);
-}, []);
+    setMounted(true);
+  }, []);
 
   const iconClass = (path: string) =>
-    `flex flex-col items-center transition ${
-      pathname === path ? "text-orange-500" : "text-gray-600"
+    `flex flex-col items-center transition ${pathname === path ? "text-orange-500" : "text-gray-600"
     }`;
 
   return (
     <>
-      <div className="fixed bottom-2 left-1/2 -translate-x-1/2 w-[95%] bg-white/95 backdrop-blur-xl shadow-2xl rounded-2xl flex justify-around items-center px-6 py-4 md:hidden z-50 border">
+      <div
+  className={`fixed bottom-2 left-1/2 -translate-x-1/2 
+  w-[95%] bg-white/95 backdrop-blur-xl shadow-2xl 
+  rounded-2xl items-center px-6 py-4 md:hidden z-50 border
+  grid ${isLoggedIn ? "grid-cols-6" : "grid-cols-3"}`}
+>
 
-        {/* HOME */}
-        <Link href="/" className={iconClass("/")}>
-          <Home size={24} />
-        </Link>
+        {/* COL 1 */}
+<Link href="/" className="flex justify-center">
+  <Home size={24} />
+</Link>
 
-        {isLoggedIn ? (
-          <>
-            {/* BOOKED TABLES */}
-            <Link
-              href="/user/booked-tables"
-              className={iconClass("/user/booked-tables")}
-            >
-              <Utensils size={22} />
-            </Link>
+{/* BEFORE LOGIN STRUCTURE */}
+{!isLoggedIn && (
+  <>
+    {/* COL 2 → CART CENTER */}
+    <div className="relative -mt-10 flex justify-center">
+      <button
+        onClick={() => setOpenCart(true)}
+        className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
+      >
+        <ShoppingCart size={24} />
+      </button>
+    </div>
 
-            {/* CART CENTER BUTTON */}
-            <div className="relative -mt-10">
-              <button
-                onClick={() => setOpenCart(true)}
-                className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
-              >
-                <ShoppingCart size={24} />
+    {/* COL 3 */}
+    <Link href="/login" className="flex justify-center text-orange-500">
+      <User size={24} />
+    </Link>
+  </>
+)}
 
-                {mounted && totalItems > 0 && (
-                  <motion.span
-                    key={totalItems}
-                    initial={false}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 400 }}
-                    className="absolute -top-2 -right-2 bg-black text-white text-[10px] px-2 py-0.5 rounded-full"
-                  >
-                    {totalItems}
-                  </motion.span>
-                )}
-              </button>
-            </div>
+{/* AFTER LOGIN STRUCTURE */}
+{isLoggedIn && (
+  <>
+    {/* COL 2 */}
+    <Link href="/user/booked-tables" className="flex justify-center">
+      <Utensils size={22} />
+    </Link>
 
-            {/* ORDERS */}
-            <Link
-              href="/user/orders"
-              className={iconClass("/user/orders")}
-            >
-              <Package size={22} />
-            </Link>
+    {/* COL 3 */}
+    <Link href="/user/orders" className="flex justify-center">
+      <Package size={22} />
+    </Link>
 
-            {/* PROFILE */}
-            <Link
-              href="/user/profile"
-              className={iconClass("/user/profile")}
-            >
-              <User size={22} />
-            </Link>
+    {/* COL 4 → CART EXACT CENTER */}
+    <div className="relative -mt-10 flex justify-center">
+      <button
+        onClick={() => setOpenCart(true)}
+        className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
+      >
+        <ShoppingCart size={24} />
+      </button>
+    </div>
 
-            {/* LOGOUT */}
-            <button
-              onClick={handleLogout}
-              className="flex flex-col items-center text-gray-600"
-            >
-              <LogOut size={22} />
-            </button>
-          </>
-        ) : (
-          <>
-            {/* LOGIN BUTTON */}
-            <Link
-              href="/login"
-              className="flex flex-col items-center text-orange-500 font-semibold"
-            >
-              <User size={24} />
-            </Link>
-          </>
-        )}
+    {/* COL 5 */}
+    <Link href="/user/profile" className="flex justify-center">
+      <User size={22} />
+    </Link>
+
+    {/* COL 6 */}
+    <button onClick={handleLogout} className="flex justify-center">
+      <LogOut size={22} />
+    </button>
+
+    {/* COL 7 (Optional placeholder for balance symmetry) */}
+    <div />
+  </>
+)}
       </div>
 
       <CartDrawer

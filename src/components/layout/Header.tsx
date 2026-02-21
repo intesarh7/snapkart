@@ -66,7 +66,7 @@ const { isLoggedIn } = useAuth();
         credentials: "include",
       });
 
-      router.push("/login");
+      router.push("/");
       router.refresh();
     } catch (error) {
       console.error("Logout failed", error);
@@ -109,7 +109,7 @@ const { isLoggedIn } = useAuth();
                 <img
                   src={settings.headerLogo}
                   alt="SnapKart"
-                  className="h-10"
+                  className="h-20"
                 />
               ) : (
                 <>
