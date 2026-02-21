@@ -12,6 +12,7 @@ export default function ProductPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const calculatePreviewFinalPrice = () => {
+    
   let base = Number(form.price) || 0;
 
   const offerValue = Number(form.offerValue) || 0;
@@ -77,6 +78,7 @@ useEffect(() => {
   }, []);
 
 const handleRestaurantChange = async (id: string) => {
+  
   setForm({ ...form, restaurantId: id, categoryId: "" });
 
   if (!id) return;
@@ -90,27 +92,17 @@ const handleRestaurantChange = async (id: string) => {
 };
 
 const handleSubmit = async () => {
-  const formData = new FormData();
-
-  formData.append("name", form.name);
-  formData.append("description", form.description);
-  formData.append("category", form.category);
-  formData.append("available", String(form.isAvailable));
-  formData.append("active", String(form.isActive));
-  formData.append("price", form.price);
-  formData.append("offerType", form.offerType);
-  formData.append("offerValue", form.offerValue);
-  formData.append("extraType", form.extraType);
-  formData.append("extraValue", form.extraValue);
-  formData.append("rating", form.rating);
-  formData.append("restaurantId", form.restaurantId);
-  formData.append("categoryId", form.categoryId);
-  formData.append("variants", JSON.stringify(form.variants));
-  formData.append("extras", JSON.stringify(form.extras));
-
-  if (form.image) {
-    formData.append("image", form.image);
-  }
+  let base64Image = null;
+const toBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+  });
+if (form.image) {
+  base64Image = await toBase64(form.image);
+}
 
   const url = editingId
     ? `/api/admin/product/update?id=${editingId}`
@@ -118,11 +110,31 @@ const handleSubmit = async () => {
 
   const method = editingId ? "PUT" : "POST";
 
-  const res = await fetch(url, {
-    method,
-    body: formData,
-  });
-
+const res = await fetch(url, {
+  method,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  credentials: "include",
+  body: JSON.stringify({
+    name: form.name,
+    description: form.description,
+    category: form.category,
+    categoryId: form.categoryId,
+    available: form.isAvailable,
+    active: form.isActive,
+    price: form.price,
+    offerType: form.offerType,
+    offerValue: form.offerValue,
+    extraType: form.extraType,
+    extraValue: form.extraValue,
+    rating: form.rating,
+    restaurantId: form.restaurantId,
+    image: base64Image,
+    variants: form.variants,
+    extras: form.extras,
+  }),
+});
   const data = await res.json();
 
   if (data.success) {

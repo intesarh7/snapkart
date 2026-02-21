@@ -30,17 +30,34 @@ export default function SpecialOfferAdmin() {
     fetchOffers();
   }, []);
 
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+
   const handleCreate = async () => {
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("priceText", priceText);
-    formData.append("buttonText", buttonText);
-    formData.append("buttonLink", buttonLink);
-    if (image) formData.append("image", image);
+    let base64Image = null;
+
+    if (image) {
+      base64Image = await toBase64(image);
+    }
 
     await fetch("/api/admin/special-offer/create", {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        title,
+        priceText,
+        buttonText,
+        buttonLink,
+        image: base64Image,
+      }),
     });
 
     setTitle("");
@@ -68,19 +85,27 @@ export default function SpecialOfferAdmin() {
   const handleUpdate = async () => {
     if (!editItem) return;
 
-    const formData = new FormData();
-    formData.append("id", editItem.id.toString());
-    formData.append("title", editItem.title);
-    formData.append("priceText", editItem.priceText || "");
-    formData.append("buttonText", editItem.buttonText || "");
-    formData.append("buttonLink", editItem.buttonLink || "");
-    if (image) formData.append("image", image);
+    let base64Image = null;
+
+    if (image) {
+      base64Image = await toBase64(image);
+    }
 
     await fetch("/api/admin/special-offer/update", {
       method: "PUT",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        id: editItem.id,
+        title: editItem.title,
+        priceText: editItem.priceText,
+        buttonText: editItem.buttonText,
+        buttonLink: editItem.buttonLink,
+        image: base64Image, // optional
+      }),
     });
-
     setEditItem(null);
     setImage(null);
     fetchOffers();
@@ -165,11 +190,10 @@ export default function SpecialOfferAdmin() {
               <div className="flex justify-between mt-4">
                 <button
                   onClick={() => toggleActive(offer.id)}
-                  className={`px-3 py-1 rounded text-sm ${
-                    offer.active
+                  className={`px-3 py-1 rounded text-sm ${offer.active
                       ? "bg-green-600 text-white"
                       : "bg-gray-400 text-white"
-                  }`}
+                    }`}
                 >
                   {offer.active ? "Active" : "Inactive"}
                 </button>

@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 interface Props {
   isOpen: boolean;
@@ -31,9 +33,10 @@ export default function CartDrawer({ isOpen, onClose }: Props) {
 
 
   useEffect(() => {
-    setIsCartOpen(false);
+    if (isOpen) {
+      onClose();
+    }
   }, [pathname]);
-
 
   useEffect(() => {
     if (!editingItem) return;
@@ -47,7 +50,7 @@ export default function CartDrawer({ isOpen, onClose }: Props) {
     }
   }, [cartItems]);
 
-  
+
 
   return (
     <AnimatePresence>
@@ -68,7 +71,7 @@ export default function CartDrawer({ isOpen, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: 400 }}
             transition={{ type: "spring", stiffness: 260, damping: 25 }}
-            className="fixed right-0 top-0 w-95 h-full bg-white z-50 shadow-2xl flex flex-col"
+            className="fixed right-0 top-0 w-full max-w-md h-full bg-white z-50 shadow-2xl flex flex-col"
           >
             {/* Header */}
             <div className="flex justify-between items-center px-6 py-5 border-b bg-linear-to-r from-[#FF6B00] to-[#FF6B00] text-white">
@@ -110,7 +113,22 @@ export default function CartDrawer({ isOpen, onClose }: Props) {
                       </button>
 
                       {/* Item Info */}
-                      <div>
+                      <div className="flex gap-4 items-center w-full">
+                        {/* Product Image */}
+                        <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0">
+                          <Image
+                            src={
+                              item.image
+                                ? getCloudinaryUrl(item.image, 300, 300)
+                                : "/placeholder.jpg"
+                            }
+                            alt={item.name}
+                            fill
+                            sizes="64px"
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
                         <h3 className="font-medium text-gray-800 text-sm leading-tight">
                           {item.name}
                         </h3>
@@ -147,7 +165,7 @@ export default function CartDrawer({ isOpen, onClose }: Props) {
                           ₹ {formatPrice((item.finalPrice || item.price) * item.quantity)}
                         </p>
                       </div>
-
+</div>
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-2 bg-blue-50 px-2 py-1 rounded-xl">
                         <button
@@ -356,7 +374,7 @@ export default function CartDrawer({ isOpen, onClose }: Props) {
                     toast.error("Your cart is empty");
                     return;
                   }
-
+                  onClose();
                   if (isLoggedIn) {
                     router.push("/user/checkout");
                   } else {

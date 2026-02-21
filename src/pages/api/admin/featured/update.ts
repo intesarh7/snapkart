@@ -1,29 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
-import multer from "multer";
-import sharp from "sharp";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
   },
 };
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-});
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) return reject(result);
-      resolve(result);
-    });
-  });
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,18 +23,16 @@ export default async function handler(
   const admin = verifyAdmin(req, res);
   if (!admin) return;
 
-  await runMiddleware(req, res, upload.single("image"));
-
-  const { id, title, tag, price } = req.body;
-
-  if (!id || !title) {
-    return res.status(400).json({
-      success: false,
-      message: "ID and Title are required",
-    });
-  }
-
   try {
+    const { id, title, tag, price, image } = req.body;
+
+    if (!id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: "ID and Title are required",
+      });
+    }
+
     const existingItem = await prisma.featured.findUnique({
       where: { id: Number(id) },
     });
@@ -60,44 +44,41 @@ export default async function handler(
       });
     }
 
-    let imagePath = existingItem.image;
+    let imageUrl = existingItem.image;
 
-    // 🔥 If new image uploaded
-    if ((req as any).file) {
-      const file = (req as any).file;
+    /* ===============================
+            📸 NEW IMAGE UPLOAD
+    ================================= */
 
-      const uploadDir = path.join(
-        process.cwd(),
-        "public/uploads/featured"
-      );
+    if (image && image.startsWith("data:image/")) {
 
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const fileName = `featured-${Date.now()}.webp`;
-      const fullPath = path.join(uploadDir, fileName);
-
-      // Resize + Convert to WebP
-      await sharp(file.buffer)
-        .resize(800, 500, { fit: "cover" })
-        .webp({ quality: 80 })
-        .toFile(fullPath);
-
-      imagePath = `/uploads/featured/${fileName}`;
-
-      // 🗑 Delete old image if exists
+      // 🔥 Delete old image from Cloudinary
       if (existingItem.image) {
-        const oldImagePath = path.join(
-          process.cwd(),
-          "public",
-          existingItem.image
-        );
+        try {
+          const publicId = existingItem.image
+            .split("/")
+            .slice(-2)
+            .join("/")
+            .split(".")[0];
 
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error("Old featured image delete error:", err);
         }
       }
+
+      // 🔥 Upload new image
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "snapkart/featured",
+        resource_type: "image",
+        transformation: [
+          { width: 800, height: 500, crop: "fill" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
+
+      imageUrl = uploadResponse.secure_url;
     }
 
     await prisma.featured.update({
@@ -106,7 +87,7 @@ export default async function handler(
         title,
         tag,
         price: price ? Number(price) : null,
-        image: imagePath,
+        image: imageUrl,
       },
     });
 
@@ -114,8 +95,9 @@ export default async function handler(
       success: true,
       message: "Featured updated successfully",
     });
+
   } catch (error: any) {
-    console.error("Update Featured Error:", error);
+    console.error("FEATURED UPDATE ERROR:", error);
     return res.status(500).json({
       success: false,
       message: error.message,

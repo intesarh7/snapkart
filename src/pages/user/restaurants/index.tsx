@@ -7,6 +7,8 @@ import axios from "axios";
 import Seo from "@/components/Seo";
 import { useContext } from "react";
 import { LocationContext } from "@/context/LocationContext";
+import Image from "next/image";
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 export default function AllRestaurants() {
   const router = useRouter();
@@ -56,8 +58,8 @@ export default function AllRestaurants() {
             ? `Discover top-rated restaurants in ${locationName}. Order food online or book tables instantly with SnapKart.`
             : "Discover top-rated restaurants near you. Order food online or book tables instantly with SnapKart."
         }
-        image="https://yourdomain.com/og-restaurants.jpg"
-        url="https://yourdomain.com/user/restaurants"
+        image="https://snapkart.in/og-restaurants.jpg"
+        url="https://snapkart.in/user/restaurants"
       />
       <script
         type="application/ld+json"
@@ -69,7 +71,7 @@ export default function AllRestaurants() {
               "@type": "ListItem",
               position: index + 1,
               name: r.name,
-              url: `https://yourdomain.com/user/restaurants/${r.id}`,
+              url: `https://snapkart.in/user/restaurants/${r.id}`,
             })),
           }),
         }}
@@ -153,10 +155,20 @@ export default function AllRestaurants() {
                   <Link href={`/user/restaurants/${r.id}`}>
 
                     <div className="relative">
-                      <img
-                        src={r.image || "/placeholder.jpg"}
-                        className="w-full h-44 object-cover"
-                      />
+                      <div className="relative w-full h-44">
+                        <Image
+                          src={getCloudinaryUrl(r.image, 600, 400)}
+                          alt={r.name}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover"
+                          loading="lazy"
+                          placeholder="empty"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = "/placeholder.jpg";
+                          }}
+                        />
+                      </div>
 
                       <div className="absolute top-3 right-3">
                         {r.isOpen ? (

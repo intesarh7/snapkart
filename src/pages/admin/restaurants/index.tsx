@@ -27,6 +27,15 @@ export default function RestaurantsPage() {
     image: null as File | null,
   });
 
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+
+
 
   // FETCH RESTAURANTS
   const fetchRestaurants = async () => {
@@ -79,10 +88,15 @@ export default function RestaurantsPage() {
     }
   };
 
-
   const handleSubmit = async () => {
     setLoading(true);
     setMessage("");
+
+    let base64Image = null;
+
+    if (form.image) {
+      base64Image = await toBase64(form.image);
+    }
 
     const url = editingId
       ? `/api/admin/restaurants/update?id=${editingId}`
@@ -90,29 +104,30 @@ export default function RestaurantsPage() {
 
     const method = editingId ? "PUT" : "POST";
 
-    const formData = new FormData();
 
-    formData.append("name", form.name);
-    formData.append("address", form.address);
-    formData.append("latitude", form.latitude);
-    formData.append("longitude", form.longitude);
-    formData.append("isActive", String(form.isActive));
-    formData.append("isOpen", String(form.isOpen));
-    formData.append("openTime", form.openTime);
-    formData.append("closeTime", form.closeTime);
-    formData.append("rating", form.rating);
-    formData.append("deliveryTime", form.deliveryTime);
-    formData.append("addOffer", form.addOffer);
-
-
-    if (form.image) {
-      formData.append("image", form.image);
-    }
 
     const res = await fetch(url, {
       method,
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        name: form.name,
+        address: form.address,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        isActive: form.isActive,
+        isOpen: form.isOpen,
+        openTime: form.openTime,
+        closeTime: form.closeTime,
+        rating: form.rating,
+        deliveryTime: form.deliveryTime,
+        addOffer: form.addOffer,
+        image: base64Image,
+      }),
     });
+
 
     const data = await res.json();
 

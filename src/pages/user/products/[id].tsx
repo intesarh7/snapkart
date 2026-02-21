@@ -7,6 +7,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Seo from "@/components/Seo";
 import { LocationContext } from "@/context/LocationContext";
+import Image from "next/image";
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 export default function ProductDetails() {
   const router = useRouter();
@@ -107,8 +109,8 @@ export default function ProductDetails() {
           ? `Get ${discountPercent}% OFF now!`
           : ""
           } Order online with fast delivery on SnapKart.`}
-        image={product.image}
-        url={`https://yourdomain.com/user/products/${product.id}`}
+        image={getCloudinaryUrl(product.image, 1200, 630)}
+        url={`https://snapkart.in/user/products/${product.id}`}
       />
       <script
         type="application/ld+json"
@@ -117,7 +119,7 @@ export default function ProductDetails() {
             "@context": "https://schema.org",
             "@type": "Product",
             name: product.name,
-            image: product.image,
+            image: getCloudinaryUrl(product.image, 1200, 1200),
             description: product.description,
             brand: {
               "@type": "Brand",
@@ -187,10 +189,16 @@ export default function ProductDetails() {
             className="relative rounded-3xl overflow-hidden shadow-xl"
           >
 
-            <img
-              src={product.image || "/placeholder.jpg"}
-              className="w-full h-72 md:h-auto object-cover"
-            />
+            <div className="relative w-full h-72 md:h-125">
+              <Image
+                src={getCloudinaryUrl(product.image, 1000, 1000)}
+                alt={product.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+                priority
+              />
+            </div>
 
             {/* Bestseller Badge */}
             {product.isBestseller && (

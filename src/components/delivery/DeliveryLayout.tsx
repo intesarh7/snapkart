@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import DeliverySidebar from "./DeliverySidebar";
+import DeliveryFooter from "./DeliveryFooter";
+import DeliveryHeader from "./DeliveryHeader";
 
 export default function DeliveryLayout({ children }: any) {
   const router = useRouter();
@@ -57,9 +59,12 @@ export default function DeliveryLayout({ children }: any) {
       )}
 
       <DeliverySidebar />
-
-      <div className="flex-1 p-6">
-        {children}
+      <div className="flex-1 flex flex-col min-h-screen">
+        <DeliveryHeader />
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+        <DeliveryFooter />
       </div>
     </div>
   );

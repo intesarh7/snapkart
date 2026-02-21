@@ -1,86 +1,130 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
   },
 };
-
-// Ensure upload folder exists
-const uploadPath = path.join(process.cwd(), "public/uploads");
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath, { recursive: true });
-}
-
-// Multer setup
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadPath,
-    filename: (req, file, cb) => {
-      cb(null, Date.now() + "-" + file.originalname);
-    },
-  }),
-});
-
-// Helper to run multer
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) return reject(result);
-      return resolve(result);
-    });
-  });
-}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   try {
-    const settings = await prisma.websiteSetting.findFirst();
 
-    res.status(200).json(settings);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch settings" });
-  }
+    /* ===============================
+                GET SETTINGS
+    ================================= */
 
+    if (req.method === "GET") {
+      const settings = await prisma.websiteSetting.findFirst();
+      return res.status(200).json(settings);
+    }
 
-  if (req.method === "PUT") {
-    try {
-      await runMiddleware(
-        req,
-        res,
-        upload.fields([
-          { name: "headerLogo", maxCount: 1 },
-          { name: "footerLogo", maxCount: 1 },
-        ])
-      );
+    /* ===============================
+                UPDATE SETTINGS
+    ================================= */
+
+    if (req.method === "PUT") {
+
+      const {
+        contactNumber,
+        email,
+        address,
+        facebook,
+        instagram,
+        twitter,
+        youtube,
+        footerInfo,
+        headerLogo,
+        footerLogo,
+      } = req.body;
 
       const existing = await prisma.websiteSetting.findFirst();
 
       const data: any = {
-        contactNumber: req.body.contactNumber,
-        email: req.body.email,
-        address: req.body.address,
-        facebook: req.body.facebook,
-        instagram: req.body.instagram,
-        twitter: req.body.twitter,
-        youtube: req.body.youtube,
-        footerInfo: req.body.footerInfo,
+        contactNumber,
+        email,
+        address,
+        facebook,
+        instagram,
+        twitter,
+        youtube,
+        footerInfo,
       };
 
-      const files = (req as any).files;
+      /* ===============================
+            HEADER LOGO UPLOAD
+      ================================= */
 
-      if (files?.headerLogo) {
-        data.headerLogo = "/uploads/" + files.headerLogo[0].filename;
+      if (headerLogo && headerLogo.startsWith("data:image/")) {
+
+        if (existing?.headerLogo) {
+          try {
+            const publicId = existing.headerLogo
+              .split("/")
+              .slice(-2)
+              .join("/")
+              .split(".")[0];
+
+            await cloudinary.uploader.destroy(publicId);
+          } catch (err) {
+            console.error("Old header logo delete error:", err);
+          }
+        }
+
+        const uploadResponse = await cloudinary.uploader.upload(
+          headerLogo,
+          {
+            folder: "snapkart/settings",
+            transformation: [
+              { width: 300, crop: "limit" },
+              { quality: "auto" },
+              { fetch_format: "auto" },
+            ],
+          }
+        );
+
+        data.headerLogo = uploadResponse.secure_url;
       }
 
-      if (files?.footerLogo) {
-        data.footerLogo = "/uploads/" + files.footerLogo[0].filename;
+      /* ===============================
+            FOOTER LOGO UPLOAD
+      ================================= */
+
+      if (footerLogo && footerLogo.startsWith("data:image/")) {
+
+        if (existing?.footerLogo) {
+          try {
+            const publicId = existing.footerLogo
+              .split("/")
+              .slice(-2)
+              .join("/")
+              .split(".")[0];
+
+            await cloudinary.uploader.destroy(publicId);
+          } catch (err) {
+            console.error("Old footer logo delete error:", err);
+          }
+        }
+
+        const uploadResponse = await cloudinary.uploader.upload(
+          footerLogo,
+          {
+            folder: "snapkart/settings",
+            transformation: [
+              { width: 300, crop: "limit" },
+              { quality: "auto" },
+              { fetch_format: "auto" },
+            ],
+          }
+        );
+
+        data.footerLogo = uploadResponse.secure_url;
       }
 
       let result;
@@ -97,11 +141,14 @@ export default async function handler(
       }
 
       return res.status(200).json(result);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: "Something went wrong" });
     }
-  }
 
-  return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({ message: "Method not allowed" });
+
+  } catch (error: any) {
+    console.error("SETTINGS ERROR:", error);
+    return res.status(500).json({
+      message: error.message || "Something went wrong",
+    });
+  }
 }

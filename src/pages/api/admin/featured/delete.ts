@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
-import fs from "fs";
-import path from "path";
+import cloudinary from "@/lib/cloudinary";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,22 +13,59 @@ export default async function handler(
   const admin = verifyAdmin(req, res);
   if (!admin) return;
 
-  const { id } = req.query;
+  try {
+    const { id } = req.query;
 
-  const item = await prisma.featured.findUnique({
-    where: { id: Number(id) },
-  });
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Featured ID required",
+      });
+    }
 
-  if (!item) return res.status(404).json({ message: "Not found" });
+    const item = await prisma.featured.findUnique({
+      where: { id: Number(id) },
+    });
 
-  if (item.image) {
-    const imgPath = path.join(process.cwd(), "public", item.image);
-    if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Featured item not found",
+      });
+    }
+
+    /* ===============================
+            ☁️ CLOUDINARY CLEANUP
+    ================================= */
+
+    if (item.image) {
+      try {
+        const publicId = item.image
+          .split("/")
+          .slice(-2)
+          .join("/")
+          .split(".")[0];
+
+        await cloudinary.uploader.destroy(publicId);
+      } catch (err) {
+        console.error("Cloudinary delete error:", err);
+      }
+    }
+
+    await prisma.featured.delete({
+      where: { id: Number(id) },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Featured item deleted successfully",
+    });
+
+  } catch (error: any) {
+    console.error("FEATURED DELETE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  await prisma.featured.delete({
-    where: { id: Number(id) },
-  });
-
-  res.status(200).json({ success: true });
 }

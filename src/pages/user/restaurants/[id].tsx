@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { CartContext } from "@/context/CartContext";
 import toast from "react-hot-toast";
 import Seo from "@/components/Seo";
+import Image from "next/image";
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 export default function RestaurantDetails() {
   const router = useRouter();
@@ -166,7 +168,7 @@ export default function RestaurantDetails() {
         <Seo
           title={`${restaurant?.name} in ${restaurantLocation} | Order Online | SnapKart`}
           description={`Order food from ${restaurant?.name} in ${restaurantLocation}. Explore menu, check ratings & book table instantly.`}
-          image={restaurant?.image}
+          image={getCloudinaryUrl(restaurant?.image, 1200, 630)}
           url={`${process.env.NEXT_PUBLIC_SITE_URL}/user/restaurants/${restaurant?.id}`}
         />
       )}
@@ -207,10 +209,16 @@ export default function RestaurantDetails() {
           </div>
           {/* Banner */}
           <div className="relative rounded-3xl overflow-hidden mb-8 md:mb-10 shadow-lg mt-10">
-            <img
-              src={restaurant.image || "/placeholder.jpg"}
-              className="w-full h-56 md:h-72 object-cover"
-            />
+            <div className="relative w-full h-56 md:h-72">
+              <Image
+                src={getCloudinaryUrl(restaurant.image, 1400, 800)}
+                alt={restaurant.name}
+                fill
+                sizes="100vw"
+                className="object-cover"
+                priority
+              />
+            </div>
             <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/40 to-transparent flex items-end p-6 md:p-8">
               <div className="text-white">
                 <h2 className="text-2xl md:text-4xl font-bold">
@@ -334,10 +342,16 @@ export default function RestaurantDetails() {
                       <div className="relative overflow-hidden">
 
                         {/* Product Image */}
-                        <img
-                          src={p.image || "/placeholder.jpg"}
-                          className="w-full h-44 object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
+                        <div className="relative w-full h-44 overflow-hidden">
+                          <Image
+                            src={getCloudinaryUrl(p.image, 600, 400)}
+                            alt={p.name}
+                            fill
+                            sizes="(max-width:768px) 50vw, 25vw"
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        </div>
 
                         {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent"></div>

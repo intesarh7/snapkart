@@ -1,11 +1,13 @@
-import type { NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
-  api: { bodyParser: false },
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
 };
 
 /* ---------------- FINAL PRICE CALCULATION ---------------- */
@@ -38,34 +40,12 @@ const calculateFinalPrice = (
   return base > 0 ? Number(base.toFixed(2)) : 0;
 };
 
-/* ---------------- MULTER SETUP ---------------- */
+/* ---------------- HANDLER ---------------- */
 
-const uploadDir = path.join(process.cwd(), "public/uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage });
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) return reject(result);
-      resolve(result);
-    });
-  });
-}
-
-export default async function handler(req: any, res: NextApiResponse) {
-  await runMiddleware(req, res, upload.single("image"));
-
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== "PUT")
     return res.status(405).json({ message: "Method not allowed" });
 
@@ -84,21 +64,37 @@ export default async function handler(req: any, res: NextApiResponse) {
 
     let imagePath = existing.image;
 
-    // If new image uploaded
-    if (req.file) {
-      // delete old image
+    /* -------- IMAGE UPDATE (Cloudinary) -------- */
+
+    if (req.body.image && req.body.image.startsWith("data:image/")) {
+
+      // Delete old image from Cloudinary
       if (existing.image) {
-        const oldPath = path.join(
-          process.cwd(),
-          "public",
-          existing.image
-        );
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+        try {
+          const parts = existing.image.split("/");
+          const uploadIndex = parts.findIndex(p => p === "upload");
+          const publicIdWithExt = parts.slice(uploadIndex + 2).join("/");
+          const publicId = publicIdWithExt.replace(/\.[^/.]+$/, "");
+
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error("Cloudinary delete error:", err);
         }
       }
 
-      imagePath = `/uploads/${req.file.filename}`;
+      const uploadResponse = await cloudinary.uploader.upload(
+        req.body.image,
+        {
+          folder: "snapkart/products",
+          resource_type: "image",
+          transformation: [
+            { quality: "auto" },
+            { fetch_format: "auto" },
+          ],
+        }
+      );
+
+      imagePath = uploadResponse.secure_url;
     }
 
     const {
@@ -117,8 +113,6 @@ export default async function handler(req: any, res: NextApiResponse) {
 
     const basePrice = Number(price);
 
-    /* -------- FINAL PRICE CALCULATION -------- */
-
     const finalPrice = calculateFinalPrice(
       basePrice,
       offerType,
@@ -128,13 +122,17 @@ export default async function handler(req: any, res: NextApiResponse) {
     );
 
     const variants = req.body.variants
-      ? JSON.parse(req.body.variants)
+      ? typeof req.body.variants === "string"
+        ? JSON.parse(req.body.variants)
+        : req.body.variants
       : [];
 
     const extras = req.body.extras
-      ? JSON.parse(req.body.extras)
+      ? typeof req.body.extras === "string"
+        ? JSON.parse(req.body.extras)
+        : req.body.extras
       : [];
-      
+
     /* -------- DATABASE UPDATE -------- */
 
     await prisma.product.update({
@@ -143,9 +141,9 @@ export default async function handler(req: any, res: NextApiResponse) {
         name,
         description,
         category,
-        isAvailable: available === "true" || available === "Yes",
-        isActive: active === "true" || active === "Yes",
-        price: Number(price),
+        isAvailable: available === true || available === "true" || available === "Yes",
+        isActive: active === true || active === "true" || active === "Yes",
+        price: basePrice,
         offerType: offerType || null,
         offerValue: offerValue ? Number(offerValue) : null,
         extraType: extraType || null,
@@ -156,42 +154,45 @@ export default async function handler(req: any, res: NextApiResponse) {
       },
     });
 
+    /* -------- RESET VARIANTS -------- */
+
     await prisma.productVariant.deleteMany({
       where: { productId: Number(id) },
     });
+
+    if (variants.length > 0) {
+      await prisma.productVariant.createMany({
+        data: variants.map((v: any) => ({
+          name: v.name,
+          price: Number(v.price),
+          finalPrice: Number(v.price),
+          productId: Number(id),
+        })),
+      });
+    }
+
+    /* -------- RESET EXTRAS -------- */
 
     await prisma.productExtra.deleteMany({
       where: { productId: Number(id) },
     });
 
-      if (variants.length > 0) {
-        await prisma.productVariant.createMany({
-          data: variants.map((v: any) => ({
-            name: v.name,
-            price: Number(v.price),
-            finalPrice: Number(v.price),
-            productId: Number(id),
-          })),
-        });
-      }
-
-      if (extras.length > 0) {
-        await prisma.productExtra.createMany({
-          data: extras.map((e: any) => ({
-            name: e.name,
-            price: Number(e.price),
-            productId: Number(id),
-          })),
-        });
-      }
-
+    if (extras.length > 0) {
+      await prisma.productExtra.createMany({
+        data: extras.map((e: any) => ({
+          name: e.name,
+          price: Number(e.price),
+          productId: Number(id),
+        })),
+      });
+    }
 
     return res.status(200).json({ success: true });
+
   } catch (error: any) {
+    console.error("PRODUCT UPDATE ERROR:", error);
     return res.status(500).json({
       message: error.message,
     });
   }
 }
-
-

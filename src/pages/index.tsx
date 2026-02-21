@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LocationContext } from "@/context/LocationContext";
 import { useTableBooking } from "@/context/TableBookingContext";
 import { useRouter } from "next/navigation";
-
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 
 interface Restaurant {
@@ -55,12 +55,12 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-  const shouldShow = localStorage.getItem("showAddressPopup");
-  if (shouldShow === "true") {
-    setShowAddressPopup(true);
-    localStorage.removeItem("showAddressPopup");
-  }
-}, []);
+    const shouldShow = localStorage.getItem("showAddressPopup");
+    if (shouldShow === "true") {
+      setShowAddressPopup(true);
+      localStorage.removeItem("showAddressPopup");
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -399,9 +399,13 @@ transition-all duration-300"
                           onClick={() => setShowDropdown(false)}
                           className="flex items-center gap-4 p-4 hover:bg-gray-50 transition border-b"
                         >
-                          <img
-                            src={r.image || "/placeholder.jpg"}
+                          <Image
+                            src={getCloudinaryUrl(r.image, 200, 200)}
+                            alt={r.name}
+                            width={80}
+                            height={80}
                             className="w-16 h-16 rounded-xl object-cover"
+                            loading="lazy"
                           />
 
                           <div>
@@ -422,9 +426,13 @@ transition-all duration-300"
                           className="flex items-center gap-4 p-4 hover:bg-gray-50 transition border-b"
                         >
                           <div className="relative">
-                            <img
-                              src={p.image || "/placeholder.jpg"}
+                            <Image
+                              src={getCloudinaryUrl(p.image, 200, 200)}
+                              alt={p.name}
+                              width={80}
+                              height={80}
                               className="w-16 h-16 rounded-xl object-cover"
+                              loading="lazy"
                             />
 
                             {p.price > p.finalPrice && (
@@ -491,7 +499,7 @@ active:scale-95
 ">
                       <span className="text-lg font-bold text-gray-700 p-2">
                         <Image
-                          src={cat.image || "/placeholder.jpg"}
+                          src={getCloudinaryUrl(cat.image, 200, 200)}
                           alt={cat.name}
                           width={100}
                           height={100}
@@ -554,10 +562,14 @@ leading-snug">
 
                     {/* IMAGE */}
                     {item.image && (
-                      <img
-                        src={item.image}
-                        className="absolute bottom-0 right-0 w-44 object-contain"
-                      />
+                      <Image
+  src={getCloudinaryUrl(item.image, 500, 500)}
+  alt={item.title}
+  width={300}
+  height={300}
+  className="absolute bottom-0 right-0 w-44 object-contain"
+  loading="lazy"
+/>
                     )}
 
                   </div>
@@ -641,10 +653,14 @@ transition-all duration-300 ease-out"
                     {/* Image Section */}
                     <div className="relative">
 
-                      <img
-                        src={r.image || "/placeholder.jpg"}
-                        className="w-full h-52 object-cover"
-                      />
+                      <Image
+  src={getCloudinaryUrl(r.image, 800, 500)}
+  alt={r.name}
+  width={800}
+  height={500}
+  className="w-full h-52 object-cover"
+  loading="lazy"
+/>
 
                       {/* Offer Badge */}
                       <span className="absolute top-4 left-4 bg-[#FF4D00] text-white text-xs px-3 py-1 rounded-md font-medium shadow">
@@ -808,10 +824,14 @@ transition-all duration-300 ease-out"
                       {/* Image Section */}
                       <div className="relative">
 
-                        <img
-                          src={p.image || "/placeholder.jpg"}
-                          className="w-full h-52 object-cover"
-                        />
+                        <Image
+  src={getCloudinaryUrl(p.image, 800, 500)}
+  alt={p.name}
+  width={800}
+  height={500}
+  className="w-full h-52 object-cover"
+  loading="lazy"
+/>
 
                         {/* Offer Badges */}
                         <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -972,18 +992,19 @@ transition-all duration-300 ease-out"
 
         {/* ================= BIG PROMO STATIC SECTION ================= */}
         {offers.map((offer) => (
-          <section
-            key={offer.id}
-            className="relative h-100 flex items-center mb-20"
-            style={{
-              backgroundImage: `url(${offer.image})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          >
-            <div className="absolute inset-0 bg-black/60"></div>
+          <section key={offer.id} className="relative h-100 flex items-center mb-20 overflow-hidden">
 
-            <div className="relative z-10 max-w-6xl mx-auto px-6 text-white">
+  <Image
+    src={getCloudinaryUrl(offer.image, 1600, 900)}
+    alt={offer.title}
+    fill
+    className="object-cover"
+    priority={false}
+  />
+
+  <div className="absolute inset-0 bg-black/60"></div>
+
+  <div className="relative z-10 max-w-6xl mx-auto px-6 text-white">
               <h2 className="text-4xl font-bold mb-3">
                 {offer.title}
               </h2>
@@ -1154,39 +1175,39 @@ transition-all duration-300 ease-out"
 
 
         {showAddressPopup && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
 
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Address Required
-                </h2>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Address Required
+              </h2>
 
-                <p className="text-sm text-gray-600 mt-2">
-                  You haven’t added a delivery address yet.
-                  Please add your address before placing an order.
-                </p>
+              <p className="text-sm text-gray-600 mt-2">
+                You haven’t added a delivery address yet.
+                Please add your address before placing an order.
+              </p>
 
-                <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-3 mt-6">
 
-                  <button
-                    onClick={() => setShowAddressPopup(false)}
-                    className="px-4 py-2 text-sm rounded-lg border"
-                  >
-                    Later
-                  </button>
+                <button
+                  onClick={() => setShowAddressPopup(false)}
+                  className="px-4 py-2 text-sm rounded-lg border"
+                >
+                  Later
+                </button>
 
-                  <button
-                    onClick={() => router.push("/user/profile")}
-                    className="px-4 py-2 text-sm rounded-lg bg-orange-500 text-white"
-                  >
-                    Add Address
-                  </button>
-
-                </div>
+                <button
+                  onClick={() => router.push("/user/profile")}
+                  className="px-4 py-2 text-sm rounded-lg bg-orange-500 text-white"
+                >
+                  Add Address
+                </button>
 
               </div>
+
             </div>
-          )}
+          </div>
+        )}
       </div>
     </>
   );

@@ -106,7 +106,7 @@ export default function AdminOrders() {
 
       <div className="bg-white shadow rounded-xl overflow-auto">
         <div className="scrollbar-thin scrollbar-thumb-gray-300">
-          <table className="text-sm tex">
+          <table className="text-sm tex w-full">
             <thead className="bg-gray-100 text-left w-full">
               <tr>
                 <th className="p-4">Order</th>
@@ -152,8 +152,20 @@ export default function AdminOrders() {
 
                           {/* 🔥 Product Image */}
                           <img
-                            src={item.product?.image || "/placeholder.jpg"}
-                            className="w-14 h-14 rounded-lg object-cover border"
+                            src={
+                              item.product?.image
+                                ? item.product.image.replace(
+                                  "/upload/",
+                                  "/upload/w_120,h_120,c_fill,q_auto,f_auto/"
+                                )
+                                : "/placeholder.jpg"
+                            }
+                            alt={item.product?.name || "Product"}
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "/placeholder.jpg";
+                            }}
+                            className="w-14 h-14 rounded-lg object-cover border bg-gray-100"
                           />
 
                           <div className="flex-1 text-xs">

@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/router";
 import { load } from "@cashfreepayments/cashfree-js"
 import Seo from "@/components/Seo";
+import Image from "next/image";
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 
 export default function CheckoutPage() {
@@ -393,7 +395,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+        <div className="flex flex-col items-center justify-center h-[40vh] text-gray-400 text-sm">
           <ShoppingBag size={40} className="mb-3 opacity-40" />
           Your cart is empty
         </div>
@@ -406,7 +408,7 @@ export default function CheckoutPage() {
       <Seo
         title={`Checkout (${cartItems.length} items) | SnapKart`}
         description="Complete your order securely on SnapKart."
-        url="https://yourdomain.com/user/checkout"
+        url={`${process.env.NEXT_PUBLIC_SITE_URL}/user/checkout`}
       />
 
       {/* 🔒 Prevent Indexing */}
@@ -490,7 +492,7 @@ export default function CheckoutPage() {
                   0
                 ) || 0;
 
-              const singleItemTotal = basePrice + extrasTotal;
+              const singleItemTotal = Number(basePrice) + Number(extrasTotal);
               const itemTotal = singleItemTotal * item.quantity;
 
               return (
@@ -503,11 +505,17 @@ export default function CheckoutPage() {
                     {/* LEFT SIDE */}
                     <div className="flex gap-2">
 
-                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-200 shrink-0">
-                        <img
-                          src={item.image || "/placeholder.jpg"}
+                      <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-gray-200 shrink-0">
+                        <Image
+                          src={
+                            item.image
+                              ? getCloudinaryUrl(item.image, 300, 300)
+                              : "/placeholder.jpg"
+                          }
                           alt={item.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="56px"
+                          className="object-cover"
                         />
                       </div>
 
@@ -554,7 +562,7 @@ export default function CheckoutPage() {
                           Qty: {item.quantity}
                         </p>
 
-                      
+
 
                       </div>
                     </div>

@@ -1,51 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import { verifyAdmin } from "@/lib/adminAuth";
-
-interface MulterRequest extends NextApiRequest {
-  file?: Express.Multer.File;
-}
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
   },
 };
 
-const uploadDir = path.join(process.cwd(), "public/uploads");
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage });
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) return reject(result);
-      return resolve(result);
-    });
-  });
-}
-
 export default async function handler(
-  req: MulterRequest,
+  req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await runMiddleware(req, res, upload.single("image"));
-
   if (req.method !== "POST")
     return res.status(405).json({ message: "Method not allowed" });
 
@@ -82,20 +52,34 @@ export default async function handler(
       rating,
       deliveryTime,
       addOffer,
+
+      // 🔥 IMAGE (Base64)
+      image,
     } = req.body;
 
     const parsedDeliveryTime = Array.isArray(deliveryTime)
       ? deliveryTime[0]
       : deliveryTime;
 
-      const parsedRating = Array.isArray(rating)
+    const parsedRating = Array.isArray(rating)
       ? rating[0]
       : rating;
 
+    // ☁️ Upload to Cloudinary (if image provided)
+    let imageUrl: string | null = null;
 
-    const imagePath = req.file
-      ? `/uploads/${req.file.filename}`
-      : null;
+    if (image && image.startsWith("data:image/")) {
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "snapkart/restaurant",
+        resource_type: "image",
+        transformation: [
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
+
+      imageUrl = uploadResponse.secure_url;
+    }
 
     const restaurant = await prisma.restaurant.create({
       data: {
@@ -106,21 +90,22 @@ export default async function handler(
         longitude: Number(longitude),
         isActive: isActive === "true",
         isOpen: isOpen === "true",
-        image: imagePath,
+        image: imageUrl,
 
         // 🔥 NEW FIELDS SAVED
         openTime: openTime || null,
         closeTime: closeTime || null,
-       deliveryTime:
-        typeof parsedDeliveryTime === "string"
-          ? parsedDeliveryTime.trim()
-          : null,
+        deliveryTime:
+          typeof parsedDeliveryTime === "string"
+            ? parsedDeliveryTime.trim()
+            : null,
 
-      rating:
-        parsedRating &&
-        parsedRating.toString().trim() !== ""
-          ? Number(parsedRating)
-          : 0,
+        rating:
+          parsedRating &&
+          parsedRating.toString().trim() !== ""
+            ? Number(parsedRating)
+            : 0,
+
         addOffer: addOffer || null,
       },
     });
@@ -129,7 +114,9 @@ export default async function handler(
       success: true,
       restaurant,
     });
+
   } catch (error: any) {
+    console.error("Restaurant Create Error:", error);
     return res.status(500).json({
       message: error.message,
     });

@@ -3,11 +3,10 @@ import toast from "react-hot-toast"
 
 export default function DeliveryProfile() {
 
-    const [profile, setProfile] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
-
-    const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [uploading, setUploading] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     fetchProfile()
@@ -20,61 +19,65 @@ export default function DeliveryProfile() {
     setLoading(false)
   }
 
+  /* ===============================
+     🖼 Convert Image to Base64
+  ================================= */
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+    })
+
   const handleSave = async () => {
-    const res = await fetch("/api/delivery/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(profile)
-    })
+    try {
+      setUploading(true)
 
-    const data = await res.json()
+      let imageBase64 = null
 
-    if (res.ok) {
-      toast.success(data.message)
-    } else {
-      toast.error(data.message)
+      if (selectedFile) {
+        imageBase64 = await toBase64(selectedFile)
+      }
+
+      const res = await fetch("/api/delivery/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...profile,
+          image: imageBase64
+        })
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        toast.success(data.message)
+        setSelectedFile(null)
+        fetchProfile()
+      } else {
+        toast.error(data.message)
+      }
+
+    } catch (error) {
+      toast.error("Something went wrong")
+    } finally {
+      setUploading(false)
     }
   }
 
-const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (!e.target.files || e.target.files.length === 0) return
-  setSelectedFile(e.target.files[0])
-}
-
-const handleUpload = async () => {
-  if (!selectedFile) {
-    alert("Select image first")
-    return
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    setSelectedFile(e.target.files[0])
   }
 
-  try {
-    setUploading(true)
-
-    const formData = new FormData()
-    formData.append("image", selectedFile)
-
-    const res = await fetch("/api/delivery/profile/upload-image", {
-      method: "POST",
-      body: formData
-    })
-
-    const data = await res.json()
-
-    if (res.ok) {
-      toast.success(data.message)
-    } else {
-      toast.error(data.message)
-    }
-
-  } catch (error) {
-    console.error("Upload error:", error)
-  } finally {
-    setUploading(false)
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse h-40 bg-gray-200 rounded-xl" />
+      </div>
+    )
   }
-}
-
-
-  if (loading) return <div className="p-6"><div className="animate-pulse h-40 bg-gray-200 rounded-xl" /></div>
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -88,22 +91,43 @@ const handleUpload = async () => {
         {/* PROFILE IMAGE */}
         <div className="flex items-center gap-6">
 
-            <img
-                src={profile.image || "/avatar.png"}
-                className="w-24 h-24 rounded-full object-cover border"
+          <img
+            src={
+              selectedFile
+                ? URL.createObjectURL(selectedFile)
+                : profile.image
+                  ? profile.image.replace(
+                      "/upload/",
+                      "/upload/w_200,h_200,c_fill,q_auto,f_auto/"
+                    )
+                  : "/avatar.png"
+            }
+            alt="Profile"
+            loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = "/avatar.png"
+            }}
+            className="w-24 h-24 rounded-full object-cover border bg-gray-100"
+          />
+
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="text-sm"
             />
 
-            <input
-  type="file"
-  accept="image/*"
-  onChange={handleFileChange}
-/>
+            <button
+              onClick={handleSave}
+              disabled={uploading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              {uploading ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
 
-<button onClick={handleUpload}>
-  {uploading ? "Uploading..." : "Upload"}
-</button>
-
-            </div>
+        </div>
 
         {/* BASIC INFO */}
         <div className="grid md:grid-cols-2 gap-4">
@@ -161,7 +185,7 @@ const handleUpload = async () => {
 
         </div>
 
-        {/* DELIVERY SETTINGS INFO */}
+        {/* DELIVERY SETTINGS */}
         <div className="grid md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
 
           <div>
@@ -200,13 +224,6 @@ const handleUpload = async () => {
             Lng: {profile.longitude || 0}
           </p>
         </div>
-
-        <button
-          onClick={handleSave}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg"
-        >
-          Save Changes
-        </button>
 
       </div>
 

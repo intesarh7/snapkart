@@ -1,6 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/lib/prisma";
 import { verifyDelivery } from "@/lib/auth";
+import cloudinary from "@/lib/cloudinary";
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -64,12 +73,45 @@ export default async function handler(
         updateData.phone = phone.trim();
       }
 
-      if (image && typeof image === "string") {
-        updateData.image = image;
-      }
-
       if (typeof isAvailable === "boolean") {
         updateData.isAvailable = isAvailable;
+      }
+
+      /* ===============================
+         🖼 IMAGE UPDATE (Cloudinary)
+      ================================= */
+      if (image && typeof image === "string") {
+        // Get existing image
+        const existingUser = await prisma.user.findUnique({
+          where: { id: delivery.id },
+        });
+
+        // Delete old image from Cloudinary
+        if (existingUser?.image?.includes("cloudinary")) {
+          try {
+            const publicId = existingUser.image
+              .split("/")
+              .slice(-2)
+              .join("/")
+              .split(".")[0];
+
+            await cloudinary.uploader.destroy(publicId);
+          } catch (err) {
+            console.log("Old image delete failed:", err);
+          }
+        }
+
+        // Upload new image
+        const uploadResponse = await cloudinary.uploader.upload(image, {
+          folder: "snapkart/delivery",
+          transformation: [
+            { width: 400, height: 400, crop: "fill" },
+            { quality: "auto" },
+            { fetch_format: "auto" },
+          ],
+        });
+
+        updateData.image = uploadResponse.secure_url;
       }
 
       await prisma.user.update({

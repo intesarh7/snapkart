@@ -1,55 +1,64 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
-import multer from "multer";
-import sharp from "sharp";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
-export const config = { api: { bodyParser: false } };
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
 
-const upload = multer({ storage: multer.memoryStorage() });
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) reject(result);
-      resolve(result);
-    });
-  });
-}
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== "POST")
     return res.status(405).json({ message: "Method not allowed" });
 
   const admin = verifyAdmin(req, res);
   if (!admin) return;
 
-  await runMiddleware(req, res, upload.single("image"));
+  try {
+    const { title, priceText, buttonText, buttonLink, image } = req.body;
 
-  const { title, priceText, buttonText, buttonLink } = req.body;
+    let imageUrl = null;
 
-  let imagePath = null;
+    /* -------- Cloudinary Upload -------- */
 
-  if ((req as any).file) {
-    const uploadDir = path.join(process.cwd(), "public/uploads/offers");
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    if (image && image.startsWith("data:image/")) {
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "snapkart/special-offers",
+        resource_type: "image",
+        transformation: [
+          { width: 1920, height: 800, crop: "fill" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
 
-    const fileName = `offer-${Date.now()}.webp`;
-    const fullPath = path.join(uploadDir, fileName);
+      imageUrl = uploadResponse.secure_url;
+    }
 
-    await sharp((req as any).file.buffer)
-      .resize(1920, 800, { fit: "cover" })
-      .webp({ quality: 85 })
-      .toFile(fullPath);
+    await prisma.specialOffer.create({
+      data: {
+        title,
+        priceText,
+        buttonText,
+        buttonLink,
+        image: imageUrl,
+      },
+    });
 
-    imagePath = `/uploads/offers/${fileName}`;
+    return res.status(201).json({ success: true });
+
+  } catch (error: any) {
+    console.error("SPECIAL OFFER CREATE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  await prisma.specialOffer.create({
-    data: { title, priceText, buttonText, buttonLink, image: imagePath },
-  });
-
-  res.status(201).json({ success: true });
 }

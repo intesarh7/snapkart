@@ -28,18 +28,34 @@ export default function FeaturedPage() {
   useEffect(() => {
     fetchFeatured();
   }, []);
+  const toBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+  });
 
   const handleCreate = async () => {
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("tag", tag);
-    formData.append("price", price);
-    if (image) formData.append("image", image);
+    let base64Image = null;
 
-    const res = await fetch("/api/admin/featured/create", {
-      method: "POST",
-      body: formData,
-    });
+if (image) {
+  base64Image = await toBase64(image);
+}
+
+const res = await fetch("/api/admin/featured/create", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  credentials: "include",
+  body: JSON.stringify({
+    title,
+    tag,
+    price,
+    image: base64Image,
+  }),
+});
 
     const data = await res.json();
 
@@ -111,6 +127,12 @@ export default function FeaturedPage() {
             }
             className="w-full border p-3 rounded-xl"
           />
+          {image && (
+  <img
+    src={URL.createObjectURL(image)}
+    className="w-full h-40 object-cover rounded-xl"
+  />
+)}
 
           <button
             onClick={handleCreate}

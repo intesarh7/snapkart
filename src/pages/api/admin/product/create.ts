@@ -2,12 +2,14 @@ import type { NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import { verifyAdmin } from "@/lib/adminAuth";
 
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
-  api: { bodyParser: false },
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
 };
 
 /* ---------------- FINAL PRICE CALCULATION ---------------- */
@@ -40,35 +42,12 @@ const calculateFinalPrice = (
   return base > 0 ? Number(base.toFixed(2)) : 0;
 };
 
-/* ---------------- MULTER SETUP ---------------- */
 
-const uploadDir = path.join(process.cwd(), "public/uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
-});
-
-const upload = multer({ storage });
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) return reject(result);
-      resolve(result);
-    });
-  });
-}
 
 /* ---------------- HANDLER ---------------- */
 
 export default async function handler(req: any, res: NextApiResponse) {
 
-  await runMiddleware(req, res, upload.single("image"));
 
   const admin = verifyAdmin(req, res);
   if (!admin) return;
@@ -117,30 +96,31 @@ export default async function handler(req: any, res: NextApiResponse) {
         extraValue ? Number(extraValue) : undefined
       );
 
-      const imagePath = req.file
-        ? `/uploads/${req.file.filename}`
-        : existing.image;
+      let imagePath = existing.image;
 
-      await prisma.product.update({
-        where: { id },
-        data: {
-          name,
-          description,
-          category,
-          categoryId: Number(categoryId),
-          isAvailable: available === "true" || available === "Yes",
-          isActive: active === "true" || active === "Yes",
-          price: basePrice,
-          offerType: offerType || null,
-          offerValue: offerValue ? Number(offerValue) : null,
-          extraType: extraType || null,
-          extraValue: extraValue ? Number(extraValue) : null,
-          finalPrice,
-          rating: rating ? Number(rating) : 0,
-          restaurantId: Number(restaurantId),
-          image: imagePath,
+      if (req.body.image && req.body.image.startsWith("data:image/")) {
+
+        // delete old image from cloudinary
+        if (existing.image) {
+          const parts = existing.image.split("/");
+          const uploadIndex = parts.findIndex(p => p === "upload");
+          const publicIdWithExt = parts.slice(uploadIndex + 2).join("/");
+          const publicId = publicIdWithExt.replace(/\.[^/.]+$/, "");
+
+          await cloudinary.uploader.destroy(publicId);
         }
-      });
+
+        const uploadResponse = await cloudinary.uploader.upload(req.body.image, {
+          folder: "snapkart/products",
+          resource_type: "image",
+          transformation: [
+            { quality: "auto" },
+            { fetch_format: "auto" },
+          ],
+        });
+
+        imagePath = uploadResponse.secure_url;
+      }
 
       return res.status(200).json({
         success: true,
@@ -177,18 +157,33 @@ export default async function handler(req: any, res: NextApiResponse) {
         extraValue ? Number(extraValue) : undefined
       );
 
-      const imagePath = req.file
-        ? `/uploads/${req.file.filename}`
-        : null;
+      let imagePath = null;
 
-        const variants = req.body.variants
-        ? JSON.parse(req.body.variants)
-        : [];
+      if (req.body.image && req.body.image.startsWith("data:image/")) {
 
-      const extras = req.body.extras
-        ? JSON.parse(req.body.extras)
-        : [];
-        
+        const uploadResponse = await cloudinary.uploader.upload(req.body.image, {
+          folder: "snapkart/products",
+          resource_type: "image",
+          transformation: [
+            { quality: "auto" },
+            { fetch_format: "auto" },
+          ],
+        });
+
+        imagePath = uploadResponse.secure_url;
+      }
+      const variants = req.body.variants
+  ? typeof req.body.variants === "string"
+    ? JSON.parse(req.body.variants)
+    : req.body.variants
+  : [];
+
+const extras = req.body.extras
+  ? typeof req.body.extras === "string"
+    ? JSON.parse(req.body.extras)
+    : req.body.extras
+  : [];
+
       await prisma.product.create({
         data: {
           name,
@@ -207,18 +202,18 @@ export default async function handler(req: any, res: NextApiResponse) {
           restaurantId: Number(restaurantId),
           image: imagePath,
           variants: {
-          create: variants.map((v: any) => ({
-            name: v.name,
-            price: Number(v.price),
-            finalPrice: Number(v.price),
-          })),
-        },
-        extras: {
-          create: extras.map((e: any) => ({
-            name: e.name,
-            price: Number(e.price),
-          })),
-        },
+            create: variants.map((v: any) => ({
+              name: v.name,
+              price: Number(v.price),
+              finalPrice: Number(v.price),
+            })),
+          },
+          extras: {
+            create: extras.map((e: any) => ({
+              name: e.name,
+              price: Number(e.price),
+            })),
+          },
         }
       });
 

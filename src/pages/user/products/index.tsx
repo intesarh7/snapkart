@@ -10,6 +10,8 @@ import { useContext } from "react";
 import { CartContext } from "@/context/CartContext";
 import Seo from "@/components/Seo";
 import { LocationContext } from "@/context/LocationContext";
+import Image from "next/image";
+import { getCloudinaryUrl } from "@/lib/cloudinary-url";
 
 export default function ProductListPage() {
   const router = useRouter();
@@ -66,8 +68,12 @@ export default function ProductListPage() {
             ? `Explore delicious food items in ${locationName}. Browse menu, compare prices & order instantly on SnapKart.`
             : "Explore delicious food items near you. Browse menu, compare prices & order instantly on SnapKart."
         }
-        image="https://yourdomain.com/og-products.jpg"
-        url="https://yourdomain.com/user/products"
+        image={getCloudinaryUrl(
+          products[0]?.image || "",
+          1200,
+          630
+        )}
+        url="https://snapkart.in/user/products"
       />
       <script
         type="application/ld+json"
@@ -79,7 +85,7 @@ export default function ProductListPage() {
               "@type": "ListItem",
               position: index + 1,
               name: p.name,
-              url: `https://yourdomain.com/user/products/${p.id}`,
+              url: `https://snapkart.in/user/products/${p.id}`,
             })),
           }),
         }}
@@ -125,8 +131,8 @@ export default function ProductListPage() {
                     setPage(1);
                   }}
                   className={`px-4 py-1.5 rounded-full border text-sm transition ${selectedCategory === cat
-                      ? "bg-linear-to-r from-[#FF6B00] to-orange-600 text-white border-[#FF6B00] shadow"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#FF6B00]"
+                    ? "bg-linear-to-r from-[#FF6B00] to-orange-600 text-white border-[#FF6B00] shadow"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-[#FF6B00]"
                     }`}
                 >
                   {cat}
@@ -185,11 +191,19 @@ export default function ProductListPage() {
                     {/* ================= IMAGE SECTION ================= */}
                     <div className="relative">
 
-                      <img
-                        src={p.image || "/placeholder.jpg"}
-                        className="w-full h-44 md:h-52 object-cover"
-                      />
-
+                      <div className="relative w-full h-44 md:h-52">
+                        <Image
+                          src={
+                            p.image
+                              ? getCloudinaryUrl(p.image, 600, 600)
+                              : "/placeholder.jpg"
+                          }
+                          alt={p.name}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                          className="object-cover"
+                        />
+                      </div>
                       {/* Main Offer Badge */}
                       {p.offerType && p.offerValue > 0 && (
                         <div className="absolute top-3 left-4 bg-white text-[#FF6B00] text-xs font-semibold px-3 py-1 rounded-full shadow">
@@ -315,8 +329,8 @@ export default function ProductListPage() {
                 key={i}
                 onClick={() => setPage(i + 1)}
                 className={`px-4 py-2 rounded-lg text-sm transition ${page === i + 1
-                    ? "bg-linear-to-r from-[#FF6B00] to-orange-600 text-white shadow"
-                    : "bg-white border border-gray-200 hover:border-[#FF6B00]"
+                  ? "bg-linear-to-r from-[#FF6B00] to-orange-600 text-white shadow"
+                  : "bg-white border border-gray-200 hover:border-[#FF6B00]"
                   }`}
               >
                 {i + 1}

@@ -7,12 +7,22 @@ export default function WebsiteSettings() {
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<any>(null);
+  const [headerFile, setHeaderFile] = useState<File | null>(null);
+  const [footerFile, setFooterFile] = useState<File | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((res) => res.json())
       .then((data) => setForm(data || {}));
   }, []);
+
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -30,52 +40,57 @@ export default function WebsiteSettings() {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData();
-
-    Object.keys(form).forEach((key) => {
-      if (form[key] !== null && form[key] !== undefined) {
-        formData.append(key, form[key]);
-      }
-    });
-
-    const headerLogo = (document.getElementById(
-      "headerLogo"
-    ) as HTMLInputElement).files?.[0];
-
-    const footerLogo = (document.getElementById(
-      "footerLogo"
-    ) as HTMLInputElement).files?.[0];
-
-    if (headerLogo) formData.append("headerLogo", headerLogo);
-    if (footerLogo) formData.append("footerLogo", footerLogo);
-
     try {
+      let headerBase64 = null;
+      let footerBase64 = null;
+
+      if (headerFile) {
+        headerBase64 = await toBase64(headerFile);
+      }
+
+      if (footerFile) {
+        footerBase64 = await toBase64(footerFile);
+      }
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          ...form,
+          headerLogo: headerBase64,
+          footerLogo: footerBase64,
+        }),
       });
 
       if (!res.ok) throw new Error();
 
       showToast("success", "Settings updated successfully");
+
+      // refresh updated data
+      const updated = await fetch("/api/admin/settings").then(res => res.json());
+      setForm(updated || {});
+      setHeaderFile(null);
+      setFooterFile(null);
+
     } catch (error) {
       showToast("error", "Something went wrong");
     }
 
     setLoading(false);
   };
-
   return (
     <div className="p-6 w-full mx-auto space-y-6">
       {/* Toast */}
       {toast && (
         <div className="fixed top-5 right-5 z-50 animate-slide-in">
           <div
-            className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-white ${
-              toast.type === "success"
-                ? "bg-green-600"
-                : "bg-red-600"
-            }`}
+            className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-white ${toast.type === "success"
+              ? "bg-green-600"
+              : "bg-red-600"
+              }`}
           >
             {toast.type === "success" ? (
               <CheckCircle size={20} />
@@ -161,12 +176,20 @@ export default function WebsiteSettings() {
             </label>
             <input
               type="file"
-              id="headerLogo"
+              onChange={(e) =>
+                setHeaderFile(e.target.files ? e.target.files[0] : null)
+              }
               className="w-full mt-1 text-sm"
             />
             {form.headerLogo && (
               <img
                 src={form.headerLogo}
+                className="h-12 mt-2 object-contain"
+              />
+            )}
+            {headerFile && (
+              <img
+                src={URL.createObjectURL(headerFile)}
                 className="h-12 mt-2 object-contain"
               />
             )}
@@ -178,12 +201,20 @@ export default function WebsiteSettings() {
             </label>
             <input
               type="file"
-              id="footerLogo"
+              onChange={(e) =>
+                setFooterFile(e.target.files ? e.target.files[0] : null)
+              }
               className="w-full mt-1 text-sm"
             />
             {form.footerLogo && (
               <img
                 src={form.footerLogo}
+                className="h-12 mt-2 object-contain"
+              />
+            )}
+            {footerFile && (
+              <img
+                src={URL.createObjectURL(footerFile)}
                 className="h-12 mt-2 object-contain"
               />
             )}

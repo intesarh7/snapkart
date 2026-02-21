@@ -1,23 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/auth";
-import multer from "multer";
-import sharp from "sharp";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
-export const config = { api: { bodyParser: false } };
-
-const upload = multer({ storage: multer.memoryStorage() });
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) reject(result);
-      resolve(result);
-    });
-  });
-}
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -28,73 +20,86 @@ export default async function handler(
 
   /* ===============================
             🔐 VERIFY ADMIN
-   ================================= */
-   const auth = await verifyAdmin(req);
- 
-   if (!auth.success) {
-     return res.status(auth.status).json({
-       success: false,
-       message: auth.message,
-     });
-   }
- 
-  await runMiddleware(req, res, upload.single("image"));
+  ================================= */
+  const auth = await verifyAdmin(req);
 
-  const { id, title, priceText, buttonText, buttonLink } = req.body;
-
-  if (!id) {
-    return res.status(400).json({ message: "Offer ID required" });
+  if (!auth.success) {
+    return res.status(auth.status).json({
+      success: false,
+      message: auth.message,
+    });
   }
 
-  const existingOffer = await prisma.specialOffer.findUnique({
-    where: { id: Number(id) },
-  });
+  try {
+    const { id, title, priceText, buttonText, buttonLink, image } = req.body;
 
-  if (!existingOffer) {
-    return res.status(404).json({ message: "Offer not found" });
-  }
-
-  let imagePath = existingOffer.image;
-
-  if ((req as any).file) {
-    const uploadDir = path.join(process.cwd(), "public/uploads/offers");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!id) {
+      return res.status(400).json({ message: "Offer ID required" });
     }
 
-    const fileName = `offer-${Date.now()}.webp`;
-    const fullPath = path.join(uploadDir, fileName);
+    const existingOffer = await prisma.specialOffer.findUnique({
+      where: { id: Number(id) },
+    });
 
-    await sharp((req as any).file.buffer)
-      .resize(1920, 800, { fit: "cover" })
-      .webp({ quality: 85 })
-      .toFile(fullPath);
+    if (!existingOffer) {
+      return res.status(404).json({ message: "Offer not found" });
+    }
 
-    imagePath = `/uploads/offers/${fileName}`;
+    let imageUrl = existingOffer.image;
 
-    // 🔥 Old image delete (optional but professional)
-    if (existingOffer.image) {
-      const oldImagePath = path.join(
-        process.cwd(),
-        "public",
-        existingOffer.image
-      );
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
+    /* ===============================
+            📸 NEW IMAGE UPLOAD
+    ================================= */
+
+    if (image && image.startsWith("data:image/")) {
+
+      // 🔥 Delete old image from Cloudinary
+      if (existingOffer.image) {
+        try {
+          const publicId = existingOffer.image
+            .split("/")
+            .slice(-2)
+            .join("/")
+            .split(".")[0];
+
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error("Old image delete error:", err);
+        }
       }
+
+      // 🔥 Upload new image
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "snapkart/special-offers",
+        resource_type: "image",
+        transformation: [
+          { width: 1920, height: 800, crop: "fill" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
+
+      imageUrl = uploadResponse.secure_url;
     }
+
+    await prisma.specialOffer.update({
+      where: { id: Number(id) },
+      data: {
+        title,
+        priceText,
+        buttonText,
+        buttonLink,
+        image: imageUrl,
+      },
+    });
+
+    return res.status(200).json({ success: true });
+
+  } catch (error: any) {
+    console.error("SPECIAL OFFER UPDATE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  await prisma.specialOffer.update({
-    where: { id: Number(id) },
-    data: {
-      title,
-      priceText,
-      buttonText,
-      buttonLink,
-      image: imagePath,
-    },
-  });
-
-  res.status(200).json({ success: true });
 }

@@ -1,27 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
-import multer from "multer";
-import sharp from "sharp";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
-  api: { bodyParser: false },
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
 };
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-});
-
-function runMiddleware(req: any, res: any, fn: any) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) return reject(result);
-      resolve(result);
-    });
-  });
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -33,41 +21,45 @@ export default async function handler(
   const admin = verifyAdmin(req, res);
   if (!admin) return;
 
-  await runMiddleware(req, res, upload.single("image"));
+  try {
+    const { title, tag, price, image } = req.body;
 
-  const { title, tag, price } = req.body;
+    let imageUrl: string | null = null;
 
-  let imagePath = null;
+    /* ===============================
+            📸 CLOUDINARY UPLOAD
+    ================================= */
 
-  if ((req as any).file) {
-    const uploadDir = path.join(
-      process.cwd(),
-      "public/uploads/featured"
-    );
+    if (image && image.startsWith("data:image/")) {
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "snapkart/featured",
+        resource_type: "image",
+        transformation: [
+          { width: 800, height: 500, crop: "fill" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
 
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+      imageUrl = uploadResponse.secure_url;
     }
 
-    const fileName = `featured-${Date.now()}.webp`;
-    const fullPath = path.join(uploadDir, fileName);
+    await prisma.featured.create({
+      data: {
+        title,
+        tag,
+        price: price ? Number(price) : null,
+        image: imageUrl,
+      },
+    });
 
-    await sharp((req as any).file.buffer)
-      .resize(800, 500, { fit: "cover" })
-      .webp({ quality: 80 })
-      .toFile(fullPath);
+    return res.status(201).json({ success: true });
 
-    imagePath = `/uploads/featured/${fileName}`;
+  } catch (error: any) {
+    console.error("FEATURED CREATE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  await prisma.featured.create({
-    data: {
-      title,
-      tag,
-      price: price ? Number(price) : null,
-      image: imagePath,
-    },
-  });
-
-  res.status(201).json({ success: true });
 }

@@ -1,12 +1,25 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
+import cloudinary from "@/lib/cloudinary";
+
+/* -------- Helper: Extract Cloudinary Public ID -------- */
+
+function extractPublicId(url: string) {
+  try {
+    const parts = url.split("/");
+    const uploadIndex = parts.findIndex((p) => p === "upload");
+    const publicIdWithExt = parts.slice(uploadIndex + 2).join("/");
+    return publicIdWithExt.replace(/\.[^/.]+$/, "");
+  } catch {
+    return null;
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-
   if (req.method !== "DELETE") {
     return res.status(405).json({
       success: false,
@@ -29,14 +42,52 @@ export default async function handler(
 
     const productId = Number(id);
 
+    const existing = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { image: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    /* -------- Delete from Cloudinary (if exists) -------- */
+
+    if (existing.image) {
+      const publicId = extractPublicId(existing.image);
+
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (err) {
+          console.error("Cloudinary delete error:", err);
+        }
+      }
+    }
+
+    /* -------- DB Transaction -------- */
+
     await prisma.$transaction(async (tx) => {
 
-      // 🔥 Delete related order items first
+      // 🔥 Delete related order items
       await tx.orderItem.deleteMany({
         where: { productId }
       });
 
-      // 🔥 Then delete product
+      // 🔥 Delete related variants
+      await tx.productVariant.deleteMany({
+        where: { productId }
+      });
+
+      // 🔥 Delete related extras
+      await tx.productExtra.deleteMany({
+        where: { productId }
+      });
+
+      // 🔥 Delete product
       await tx.product.delete({
         where: { id: productId }
       });
