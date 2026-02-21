@@ -11,6 +11,8 @@ export default async function handler(
   }
 
   try {
+    /* ================= AUTH ================= */
+
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -38,7 +40,7 @@ export default async function handler(
       }
     }
 
-    /* ================= CREATE PAYMENT ENTRY FIRST ================= */
+    /* ================= CREATE PAYMENT ENTRY ================= */
 
     const payment = await prisma.payment.create({
       data: {
@@ -53,56 +55,63 @@ export default async function handler(
 
     const gatewayOrderId = `SNAP_${payment.id}`;
 
-    /* ================= CREATE CASHFREE ORDER ================= */
+    /* ================= CASHFREE CONFIG ================= */
+
+    const isProduction =
+      process.env.CASHFREE_MODE === "PRODUCTION";
+
+    const cashfreeUrl = isProduction
+      ? "https://api.cashfree.com/pg/orders"
+      : "https://sandbox.cashfree.com/pg/orders";
 
     const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "https://snapkart-mu.vercel.app/";
+      process.env.NEXT_PUBLIC_BASE_URL || "https://snapkart.in";
 
-    const cashfreeRes = await fetch(
-      process.env.CASHFREE_ENV === "PROD"
-        ? "https://api.cashfree.com/pg/orders"
-        : "https://sandbox.cashfree.com/pg/orders",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-client-id": process.env.CASHFREE_APP_ID!,
-          "x-client-secret": process.env.CASHFREE_SECRET_KEY!,
-          "x-api-version": "2022-09-01",
+    /* ================= CREATE CASHFREE ORDER ================= */
+
+    const cashfreeRes = await fetch(cashfreeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-id": process.env.CASHFREE_CLIENT_ID!,
+        "x-client-secret": process.env.CASHFREE_CLIENT_SECRET!,
+        "x-api-version": "2023-08-01",
+      },
+      body: JSON.stringify({
+        order_id: gatewayOrderId,
+        order_amount: Number(amount),
+        order_currency: "INR",
+        customer_details: {
+          customer_id: String(user.id),
+          customer_email: user.email,
+          customer_phone: user.phone || "9999999999",
         },
-        body: JSON.stringify({
-          order_id: gatewayOrderId,
-          order_amount: Number(amount),
-          order_currency: "INR",
-          customer_details: {
-            customer_id: String(user.id),
-            customer_email: user.email,
-            customer_phone: user.phone || "9999999999",
-          },
-          order_meta: {
-            return_url: `${baseUrl}/user/payment-success`,
-          },
-        }),
-      }
-    );
+        order_meta: {
+          return_url: `${baseUrl}/user/payment-success`,
+        },
+      }),
+    });
 
     const cashfreeData = await cashfreeRes.json();
 
+    console.log("Cashfree Response:", cashfreeData);
+
     if (!cashfreeRes.ok) {
-      console.error("Cashfree Error:", cashfreeData);
       return res.status(400).json({
-        message: "Cashfree order failed",
+        message:
+          cashfreeData?.message ||
+          "Cashfree order creation failed",
       });
     }
 
-    const paymentLink = cashfreeData?.payments?.url;
+    /* ================= VALIDATE SESSION ID ================= */
 
-if (!paymentLink) {
-  console.error("Cashfree response:", cashfreeData);
-  return res.status(400).json({
-    message: "Payment link not received",
-  });
-}
+    if (!cashfreeData?.payment_session_id) {
+      console.error("Invalid Cashfree response:", cashfreeData);
+      return res.status(400).json({
+        message: "payment_session_id not received from Cashfree",
+      });
+    }
 
     /* ================= SAVE GATEWAY ORDER ID ================= */
 
@@ -113,13 +122,17 @@ if (!paymentLink) {
       },
     });
 
+    /* ================= SUCCESS RESPONSE ================= */
+
     return res.status(200).json({
-  paymentSessionId: cashfreeData.payment_session_id,
-  paymentId: payment.id,
-});
+      paymentSessionId: cashfreeData.payment_session_id,
+      paymentId: payment.id,
+    });
 
   } catch (error) {
     console.error("Payment create error:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({
+      message: "Server error while creating payment",
+    });
   }
 }
