@@ -1,39 +1,85 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-import prisma from "@/lib/prisma"
-import { verifyRole } from "@/lib/auth";
+import type { NextApiRequest, NextApiResponse } from "next";
+import prisma from "@/lib/prisma";
+import { verifyDelivery } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" })
+    return res.status(405).json({
+      success: false,
+      message: "Method not allowed",
+    });
   }
 
   try {
-   const user = await verifyRole(req, res, ["ADMIN", "DELIVERY"]);
-    if (!user) return;
+    /* ===============================
+       🔐 VERIFY DELIVERY
+    ================================= */
+    const auth = await verifyDelivery(req);
 
-    if (!user || user.role !== "DELIVERY") {
-      return res.status(403).json({ message: "Forbidden" })
+    if (!auth.success) {
+      return res.status(auth.status).json({
+        success: false,
+        message: auth.message,
+      });
     }
-    
 
-    const { latitude, longitude } = req.body
+    const deliveryUser = auth.user;
 
+    if (!deliveryUser.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: "You are offline. Cannot update location.",
+      });
+    }
+
+    /* ===============================
+       📍 VALIDATE LOCATION DATA
+    ================================= */
+    const { latitude, longitude } = req.body;
+
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+
+    if (
+      isNaN(lat) ||
+      isNaN(lng) ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid latitude or longitude",
+      });
+    }
+
+    /* ===============================
+       💾 UPDATE LOCATION
+    ================================= */
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: deliveryUser.id },
       data: {
-        latitude,
-        longitude,
-        lastLocationUpdate: new Date()
-      }
-    })
+        latitude: lat,
+        longitude: lng,
+        lastLocationUpdate: new Date(),
+      },
+    });
 
-    return res.status(200).json({ message: "Location updated" })
+    return res.status(200).json({
+      success: true,
+      message: "Location updated successfully",
+    });
 
   } catch (error) {
-    console.error("Location Update Error:", error)
-    return res.status(500).json({ message: "Server error" })
+    console.error("Location Update Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
