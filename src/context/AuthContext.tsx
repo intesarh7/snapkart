@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         const res = await fetch("/api/auth/me", {
           credentials: "include",
+          cache: "no-store",
         });
 
         if (!isMounted) return;

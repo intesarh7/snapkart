@@ -58,17 +58,24 @@ export const getUserFromRequest = async (
 ) => {
   try {
     const token = req.cookies?.snapkart_token;
+    console.log("Token:", token);
+
     if (!token) return null;
 
     const decoded = verifyToken(token);
+    console.log("Decoded:", decoded);
+
     if (!decoded?.id) return null;
 
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
+      where: { id: Number(decoded.id) },
     });
 
+    console.log("User from DB:", user);
+
     return user;
-  } catch {
+  } catch (err) {
+    console.log("Auth error:", err);
     return null;
   }
 };
@@ -78,14 +85,14 @@ export const getUserFromRequest = async (
 ================================= */
 export const getUserFromAppRouter = async () => {
   try {
-    const token = await getTokenFromCookies();  // 🔥 await
+    const token = await getTokenFromCookies();
     if (!token) return null;
 
     const decoded = verifyToken(token);
     if (!decoded?.id) return null;
 
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
+      where: { id: Number(decoded.id) }, // 🔥 FIX HERE
     });
 
     return user;
@@ -102,18 +109,14 @@ type UserRole = "ADMIN" | "USER" | "DELIVERY";
 
 export const verifyRole = async (
   req: NextApiRequest,
-  res: NextApiResponse,
   allowedRoles: UserRole[]
 ) => {
   const user = await getUserFromRequest(req);
+  if (!user) return null;
 
-  if (!user) {
-    res.status(401).json({ message: "Unauthorized" });
-    return null;
-  }
+  const normalizedRole = user.role?.toUpperCase();
 
-  if (!allowedRoles.includes(user.role as UserRole)) {
-    res.status(403).json({ message: "Access Denied" });
+  if (!allowedRoles.includes(normalizedRole as UserRole)) {
     return null;
   }
 

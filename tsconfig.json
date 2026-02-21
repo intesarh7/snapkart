@@ -38,6 +38,8 @@
     "src/lib/deliveryRule.js"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "capacitor.config.ts",
+    ".env"
   ]
 }

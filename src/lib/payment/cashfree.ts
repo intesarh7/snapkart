@@ -1,16 +1,15 @@
-import axios from "axios"
+import axios from "axios";
 
-const baseURL =
-  process.env.CASHFREE_MODE === "PROD"
-    ? "https://api.cashfree.com/pg"
-    : "https://sandbox.cashfree.com/pg"
+const isProd = process.env.CASHFREE_MODE === "PRODUCTION";
 
 export const cashfreeApi = axios.create({
-  baseURL,
+  baseURL: isProd
+    ? "https://api.cashfree.com/pg"
+    : "https://sandbox.cashfree.com/pg",
   headers: {
     "Content-Type": "application/json",
-    "x-client-id": process.env.CASHFREE_APP_ID!,
-    "x-client-secret": process.env.CASHFREE_SECRET_KEY!,
-    "x-api-version": "2023-08-01"
-  }
-})
+    "x-client-id": process.env.CASHFREE_CLIENT_ID!,
+    "x-client-secret": process.env.CASHFREE_CLIENT_SECRET!,
+    "x-api-version": "2023-08-01",
+  },
+});
