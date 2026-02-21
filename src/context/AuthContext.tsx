@@ -1,12 +1,20 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
 
 interface AuthContextType {
   user: any;
   isLoggedIn: boolean;
   loading: boolean;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -14,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   loading: true,
   logout: async () => {},
+  refreshAuth: async () => {},
 });
 
 interface AuthProviderProps {
@@ -24,10 +33,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  /* ===============================
+     🔄 REFRESH AUTH (Reusable)
+  ================================= */
+  const refreshAuth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data?.user || null);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Refresh auth error:", error);
+      setUser(null);
+    }
+  }, []);
+
+  /* ===============================
+     🧠 INITIAL AUTH CHECK
+  ================================= */
   useEffect(() => {
     let isMounted = true;
 
-    const checkAuth = async () => {
+    const initAuth = async () => {
       try {
         const res = await fetch("/api/auth/me", {
           credentials: "include",
@@ -36,35 +70,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (!isMounted) return;
 
-        if (res.status === 401) {
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data?.user || null);
+        } else {
           setUser(null);
-          return;
         }
-
-        if (!res.ok) {
-          console.error("Auth check failed:", res.status);
-          setUser(null);
-          return;
-        }
-
-        const data = await res.json();
-        setUser(data?.user || null);
-
       } catch (error) {
-        console.error("Auth error:", error);
+        console.error("Auth init error:", error);
         setUser(null);
       } finally {
         if (isMounted) setLoading(false);
       }
     };
 
-    checkAuth();
+    initAuth();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
+  /* ===============================
+     🚪 LOGOUT
+  ================================= */
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", {
@@ -85,6 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isLoggedIn: !!user,
         loading,
         logout,
+        refreshAuth,
       }}
     >
       {children}

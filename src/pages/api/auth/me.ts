@@ -15,8 +15,10 @@ export default async function handler(
     const user = await getUserFromRequest(req);
 
     if (!user) {
+      console.log("Cookies:", req.cookies);
       return res.status(401).json({ message: "Unauthorized" });
     }
+    
 
     // 🔄 Always fetch fresh user from DB
     const freshUser = await prisma.user.findUnique({

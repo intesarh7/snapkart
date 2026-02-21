@@ -1,11 +1,15 @@
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Image from "next/image";
 import { Lock, Mail } from "lucide-react";
+import { useAuth } from "@/context/AuthContext"; // ✅ adjust path if needed
 
 export default function Login() {
   const router = useRouter();
+  const { refreshAuth } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -20,6 +24,9 @@ export default function Login() {
     setErrors({});
     setLoading(true);
 
+    /* ===============================
+       BASIC VALIDATION
+    ================================= */
     if (!form.email) {
       setErrors({ email: "Email is required" });
       setLoading(false);
@@ -33,6 +40,9 @@ export default function Login() {
     }
 
     try {
+      /* ===============================
+         LOGIN API CALL
+      ================================= */
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,48 +58,58 @@ export default function Login() {
         return;
       }
 
-      // 🔍 After successful login
+      /* ===============================
+         🔄 IMPORTANT — REFRESH AUTH STATE
+      ================================= */
+      await refreshAuth();
+
+      /* ===============================
+         ROLE BASED REDIRECT
+      ================================= */
+
       if (data.role === "USER") {
+        try {
+          const addressRes = await fetch("/api/user/address/check", {
+            credentials: "include",
+          });
 
-        // ✅ Address check API call
-        const addressRes = await fetch("/api/user/address/check", {
-          credentials: "include",
-        });
+          if (addressRes.ok) {
+            const addressData = await addressRes.json();
 
-        const addressData = await addressRes.json();
-
-        // ❌ If address not filled
-        if (!addressData.hasAddress) {
-          localStorage.setItem("showAddressPopup", "true");
+            if (!addressData.hasAddress) {
+              localStorage.setItem("showAddressPopup", "true");
+            }
+          }
+        } catch {
+          // ignore address check error
         }
 
         router.replace("/");
+      }
 
-      } else if (data.role === "ADMIN") {
+      else if (data.role === "ADMIN") {
         router.replace("/admin");
+      }
 
-      } else if (data.role === "DELIVERY") {
+      else if (data.role === "DELIVERY") {
         router.replace("/delivery/dashboard");
       }
 
     } catch (error) {
       setErrors({ general: "Something went wrong" });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 bg-linear-to-br from-orange-50 to-orange-100">
 
-      {/* Background Pattern with Opacity */}
       <div className="absolute inset-0 bg-[url('/images/bg-pattern.png')] bg-repeat [bg-size:900px_900px] opacity-18 pointer-events-none"></div>
 
-
-      {/* LEFT FOOD IMAGE */}
       <div className="hidden lg:block absolute -left-20 top-0">
         <Image
-          src="/images/food-left.png"   // 🔁 Replace with your PNG
+          src="/images/food-left.png"
           alt="Food"
           width={300}
           height={300}
@@ -97,10 +117,9 @@ export default function Login() {
         />
       </div>
 
-      {/* RIGHT FOOD IMAGE */}
       <div className="hidden lg:block absolute -right-20 top-10">
         <Image
-          src="/images/food-right.png"  // 🔁 Replace with your PNG
+          src="/images/food-right.png"
           alt="Food"
           width={300}
           height={300}
@@ -108,29 +127,25 @@ export default function Login() {
         />
       </div>
 
-
-
-      {/* LOGIN CARD */}
       <div className="bg-white/90 backdrop-blur-lg w-full max-w-md p-8 rounded-3xl shadow-2xl border border-white">
-        {/* LOGO IMAGE */}
+
         <div className="lg:block">
           <Link href="/">
-           
-          <Image
-            src="/logo.png"   // 🔁 Replace with your PNG
-            alt="Food"
-            width={100}
-            height={100}
-            className="opacity-90 m-auto mb-5"
-          />
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={100}
+              height={100}
+              className="opacity-90 m-auto mb-5"
+            />
           </Link>
         </div>
+
         <div className="text-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">
-            Login
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-800">Login</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Welcome back to <span className="font-semibold text-orange-600">SnapKart</span>
+            Welcome back to{" "}
+            <span className="font-semibold text-orange-600">SnapKart</span>
           </p>
         </div>
 
@@ -140,7 +155,6 @@ export default function Login() {
           <div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-
               <input
                 type="email"
                 placeholder="Enter Email Address"
@@ -148,17 +162,16 @@ export default function Login() {
                 onChange={(e) =>
                   setForm({ ...form, email: e.target.value })
                 }
-                className={`w-full pl-10 pr-3 py-3 rounded-xl border bg-gray-50 focus:outline-none focus:ring-2 transition ${errors.email
+                className={`w-full pl-10 pr-3 py-3 rounded-xl border bg-gray-50 focus:outline-none focus:ring-2 transition ${
+                  errors.email
                     ? "border-red-500 focus:ring-red-400"
                     : "focus:ring-orange-500"
-                  }`}
+                }`}
               />
             </div>
 
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.email}
-              </p>
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
             )}
           </div>
 
@@ -166,7 +179,6 @@ export default function Login() {
           <div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-
               <input
                 type="password"
                 placeholder="Password"
@@ -174,10 +186,11 @@ export default function Login() {
                 onChange={(e) =>
                   setForm({ ...form, password: e.target.value })
                 }
-                className={`w-full pl-10 pr-3 py-3 rounded-xl border bg-gray-50 focus:outline-none focus:ring-2 transition ${errors.password
+                className={`w-full pl-10 pr-3 py-3 rounded-xl border bg-gray-50 focus:outline-none focus:ring-2 transition ${
+                  errors.password
                     ? "border-red-500 focus:ring-red-400"
                     : "focus:ring-orange-500"
-                  }`}
+                }`}
               />
             </div>
 
@@ -203,16 +216,17 @@ export default function Login() {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
-
         </form>
 
         <p className="text-center mt-6 text-sm text-gray-600">
           Don’t have an account?{" "}
-          <Link href="/register" className="text-orange-600 font-semibold hover:underline">
+          <Link
+            href="/register"
+            className="text-orange-600 font-semibold hover:underline"
+          >
             Register
           </Link>
         </p>
-
       </div>
     </div>
   );
