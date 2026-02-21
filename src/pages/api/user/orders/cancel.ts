@@ -1,113 +1,147 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-
-import prisma from "@/lib/prisma"
-import { verifyRole } from "@/lib/auth";
-import { processRefund } from "@/lib/payment/payment.service"
+import type { NextApiRequest, NextApiResponse } from "next";
+import prisma from "@/lib/prisma";
+import { verifyUser } from "@/lib/auth";
+import { processRefund } from "@/lib/payment/payment.service";
 
 export default async function handler(
-     req: NextApiRequest,
-      res: NextApiResponse
-    
+  req: NextApiRequest,
+  res: NextApiResponse
 ) {
-
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" })
+    return res.status(405).json({
+      success: false,
+      message: "Method not allowed",
+    });
   }
 
   try {
-   const user = await verifyRole(req, res, ["USER"]);
+    /* ===============================
+       🔐 VERIFY USER
+    ================================= */
+    const auth = await verifyUser(req);
 
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" })
+    if (!auth.success) {
+      return res.status(auth.status).json({
+        success: false,
+        message: auth.message,
+      });
     }
 
-    const { orderId, reason } = req.body
+    const user = auth.user;
+
+    const { orderId, reason } = req.body;
+
+    if (!orderId || isNaN(Number(orderId))) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid order ID required",
+      });
+    }
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { payments: true }
-    })
+      where: { id: Number(orderId) },
+      include: { payments: true },
+    });
 
     if (!order || order.userId !== user.id) {
-      return res.status(404).json({ message: "Order not found" })
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
     }
 
-    // 🔥 ADD NEW — SMART CANCEL RULE (5 MINUTE LIMIT)
-    const FIVE_MINUTES = 5 * 60 * 1000
-    const orderTime = new Date(order.createdAt).getTime()
-    const now = Date.now()
+    /* ===============================
+       ⏱ 5 MINUTE CANCEL WINDOW
+    ================================= */
+    const FIVE_MINUTES = 5 * 60 * 1000;
+    const orderTime = new Date(order.createdAt).getTime();
+    const now = Date.now();
 
     if (now - orderTime > FIVE_MINUTES) {
       return res.status(400).json({
-        message: "Cancel window expired (5 minutes limit)"
-      })
+        success: false,
+        message: "Cancel window expired (5 minutes limit)",
+      });
     }
 
-    // 🔥 ADD NEW — BLOCK AFTER PREPARING
+    /* ===============================
+       🚫 BLOCK AFTER PREPARING
+    ================================= */
     if (
       order.status === "PREPARING" ||
       order.status === "OUT_FOR_DELIVERY" ||
       order.status === "DELIVERED"
     ) {
       return res.status(400).json({
-        message: "Order cannot be cancelled at this stage"
-      })
+        success: false,
+        message: "Order cannot be cancelled at this stage",
+      });
     }
 
-    // ❌ Already cancelled
     if (order.status === "CANCELLED") {
-      return res.status(400).json({ message: "Order already cancelled" })
+      return res.status(400).json({
+        success: false,
+        message: "Order already cancelled",
+      });
     }
 
-    // ===============================
-    // 🟢 ONLINE REFUND CASE
-    // ===============================
+    /* ===============================
+       💳 ONLINE PAYMENT REFUND
+    ================================= */
     if (order.paymentMethod === "ONLINE" && order.paymentStatus === "PAID") {
-
-      const payment = order.payments[0]
+      const payment = order.payments?.[0];
 
       if (!payment) {
-        return res.status(400).json({ message: "Payment not found" })
+        return res.status(400).json({
+          success: false,
+          message: "Payment not found",
+        });
       }
 
-      await processRefund(payment.id)
+      await processRefund(payment.id);
 
       await prisma.order.update({
-        where: { id: orderId },
+        where: { id: Number(orderId) },
         data: {
           status: "CANCELLED",
           cancelledByRole: "USER",
           cancelReason: reason || "User cancelled",
           cancelledAt: new Date(),
           refundStatus: "REFUNDED",
-          refundAmount: order.finalAmount
-        }
-      })
+          refundAmount: order.finalAmount,
+        },
+      });
 
       return res.status(200).json({
-        message: "Order cancelled & refund initiated"
-      })
+        success: true,
+        message: "Order cancelled & refund initiated",
+      });
     }
 
-    // ===============================
-    // 🟢 COD CASE
-    // ===============================
+    /* ===============================
+       💵 COD CASE
+    ================================= */
     await prisma.order.update({
-      where: { id: orderId },
+      where: { id: Number(orderId) },
       data: {
         status: "CANCELLED",
         cancelledByRole: "USER",
         cancelReason: reason || "User cancelled",
         cancelledAt: new Date(),
-      }
-    })
+      },
+    });
 
     return res.status(200).json({
-      message: "Order cancelled successfully"
-    })
+      success: true,
+      message: "Order cancelled successfully",
+    });
 
   } catch (error) {
-    console.error("Cancel Order Error:", error)
-    return res.status(500).json({ message: "Server error" })
+    console.error("Cancel Order Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
