@@ -1,9 +1,18 @@
 import { prisma } from "@/lib/prisma";
-import { verifyRole } from "@/lib/auth";
+import { verifyAdmin } from "@/lib/auth";
 
 export default async function handler(req, res) {
-  const admin = await verifyRole(req, res, ["ADMIN"]);
-  if (!admin) return;
+   /* ===============================
+      🔐 VERIFY ADMIN
+   ================================= */
+   const auth = await verifyAdmin(req);
+ 
+   if (!auth.success) {
+     return res.status(auth.status).json({
+       success: false,
+       message: auth.message,
+     });
+   }
 
   try {
     const totalUsers = await prisma.User.count();

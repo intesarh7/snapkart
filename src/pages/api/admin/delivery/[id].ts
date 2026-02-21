@@ -1,14 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import { verifyRole } from "@/lib/auth";
+import { verifyAdmin } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const admin = await verifyRole(req, res, ["ADMIN"]);
-    if (!admin) return;
-
+  /* ===============================
+      🔐 VERIFY ADMIN
+   ================================= */
+   const auth = await verifyAdmin(req);
+ 
+   if (!auth.success) {
+     return res.status(auth.status).json({
+       success: false,
+       message: auth.message,
+     });
+   }
   const id = Number(req.query.id);
 
  if (req.method === "PUT") {

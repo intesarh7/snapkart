@@ -1,17 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/prisma";
-import { verifyRole } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { verifyAdmin } from "@/lib/auth";
 import { CouponType } from "@prisma/client";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const admin = await verifyRole(req, res, ["ADMIN"]);
-  if (!admin) return;
+  /* ===============================
+     🔐 VERIFY ADMIN
+  ================================= */
+  const auth = await verifyAdmin(req);
+
+  if (!auth.success) {
+    return res.status(auth.status).json({
+      success: false,
+      message: auth.message,
+    });
+  }
+
+  const admin = auth.user;
 
   const id = Number(req.query.id);
 
+  /* ===============================
+     ✏ UPDATE COUPON
+  ================================= */
   if (req.method === "PUT") {
     const { title, description, code, type, value, isActive, expiresAt } =
       req.body;
@@ -25,13 +39,16 @@ export default async function handler(
         type: type as CouponType,
         value: parseFloat(value),
         isActive,
-        expiresAt: expiresAt ? new Date(expiresAt) : null
-      }
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      },
     });
 
     return res.status(200).json(updated);
   }
 
+  /* ===============================
+     🗑 DELETE COUPON
+  ================================= */
   if (req.method === "DELETE") {
     await prisma.coupon.delete({ where: { id } });
     return res.status(200).json({ success: true });

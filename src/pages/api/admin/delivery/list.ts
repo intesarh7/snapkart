@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import prisma from "@/lib/prisma"
-import { getUserFromRequest } from "@/lib/auth"
+import { verifyAdmin } from "@/lib/auth"
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,11 +13,20 @@ export default async function handler(
 
   try {
 
-    const admin = await getUserFromRequest(req)
+    const admin = await verifyAdmin(req)
 
-    if (!admin || admin.role !== "ADMIN") {
-      return res.status(403).json({ message: "Forbidden" })
-    }
+     /* ===============================
+         🔐 VERIFY ADMIN
+      ================================= */
+      const auth = await verifyAdmin(req);
+    
+      if (!auth.success) {
+        return res.status(auth.status).json({
+          success: false,
+          message: auth.message,
+        });
+      } 
+   
 
     const deliveryBoys = await prisma.user.findMany({
       where: {

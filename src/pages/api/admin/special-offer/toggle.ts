@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
-import { verifyRole } from "@/lib/auth";
+import { verifyAdmin } from "@/lib/auth";
 
 
 export default async function handler(
@@ -11,8 +11,17 @@ export default async function handler(
     return res.status(405).json({ message: "Method not allowed" });
   }
 
- const admin = await verifyRole(req, res, ["ADMIN"]);
-  if (!admin) return;
+ /* ===============================
+           🔐 VERIFY ADMIN
+  ================================= */
+  const auth = await verifyAdmin(req);
+
+  if (!auth.success) {
+    return res.status(auth.status).json({
+      success: false,
+      message: auth.message,
+    });
+  }
 
   const { id } = req.query;
 

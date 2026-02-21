@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/prisma";
-import { verifyRole } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { verifyAdmin } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,23 +13,40 @@ export default async function handler(
     });
   }
 
-  // 🔐 Admin Auth
-const admin = await verifyRole(req, res, ["ADMIN"]);
-  if (!admin) return;
-
-
   try {
-    const { id } = req.query;
+    /* ===============================
+       🔐 VERIFY ADMIN
+    ================================= */
+    const auth = await verifyAdmin(req);
 
-    if (!id) {
-      return res.status(400).json({
+    if (!auth.success) {
+      return res.status(auth.status).json({
         success: false,
-        message: "User ID required",
+        message: auth.message,
       });
     }
 
+    const admin = auth.user;
+
+    /* ===============================
+       🆔 GET USER ID
+    ================================= */
+    const { id } = req.query;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid User ID required",
+      });
+    }
+
+    const userId = Number(id);
+
+    /* ===============================
+       🔎 CHECK USER EXISTS
+    ================================= */
     const user = await prisma.user.findUnique({
-      where: { id: Number(id) },
+      where: { id: userId },
     });
 
     if (!user) {
@@ -39,17 +56,21 @@ const admin = await verifyRole(req, res, ["ADMIN"]);
       });
     }
 
-    // Prevent deleting self
-    if (Number(id) === admin.id) {
+    /* ===============================
+       🚫 PREVENT SELF DELETE
+    ================================= */
+    if (userId === admin.id) {
       return res.status(403).json({
         success: false,
-        message:
-          "You cannot delete your own account",
+        message: "You cannot delete your own account",
       });
     }
 
+    /* ===============================
+       🗑 DELETE USER
+    ================================= */
     await prisma.user.delete({
-      where: { id: Number(id) },
+      where: { id: userId },
     });
 
     return res.status(200).json({
@@ -58,9 +79,11 @@ const admin = await verifyRole(req, res, ["ADMIN"]);
     });
 
   } catch (error: any) {
+    console.error("Delete User Error:", error);
+
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Internal server error",
     });
   }
 }

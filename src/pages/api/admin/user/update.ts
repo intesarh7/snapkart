@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { verifyRole } from "@/lib/auth";
+import { verifyAdmin } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,10 +14,18 @@ export default async function handler(
     });
   }
 
-  // 🔐 Admin Auth
- const admin = await verifyRole(req, res, ["ADMIN"]);
-  if (!admin) return;
-
+ /* ===============================
+           🔐 VERIFY ADMIN
+        ================================= */
+        const auth = await verifyAdmin(req);
+      
+        if (!auth.success) {
+          return res.status(auth.status).json({
+            success: false,
+            message: auth.message,
+          });
+        } 
+     
   try {
     const { id } = req.query;
     const { name, email, phone, password, role } =
@@ -42,7 +50,7 @@ export default async function handler(
     }
 
     // Prevent changing own role
-    if (Number(id) === admin.id && role !== "ADMIN") {
+    if (Number(id) === auth.id && role !== "ADMIN") {
       return res.status(403).json({
         success: false,
         message:

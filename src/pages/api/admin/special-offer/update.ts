@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { verifyRole } from "@/lib/auth";
+import { verifyAdmin } from "@/lib/auth";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -26,9 +26,18 @@ export default async function handler(
   if (req.method !== "PUT")
     return res.status(405).json({ message: "Method not allowed" });
 
-   const admin = await verifyRole(req, res, ["ADMIN"]);
-  if (!admin) return;
-
+  /* ===============================
+            🔐 VERIFY ADMIN
+   ================================= */
+   const auth = await verifyAdmin(req);
+ 
+   if (!auth.success) {
+     return res.status(auth.status).json({
+       success: false,
+       message: auth.message,
+     });
+   }
+ 
   await runMiddleware(req, res, upload.single("image"));
 
   const { id, title, priceText, buttonText, buttonLink } = req.body;
