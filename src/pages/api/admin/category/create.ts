@@ -2,9 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
 import multer from "multer";
-import sharp from "sharp";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
   api: {
@@ -20,7 +18,7 @@ function runMiddleware(req: any, res: any, fn: any) {
   return new Promise((resolve, reject) => {
     fn(req, res, (result: any) => {
       if (result instanceof Error) return reject(result);
-      return resolve(result);
+      resolve(result);
     });
   });
 }
@@ -53,31 +51,28 @@ export default async function handler(
     if ((req as any).file) {
       const file = (req as any).file;
 
-      const uploadDir = path.join(
-        process.cwd(),
-        "public/uploads/categories"
-      );
+      // Convert buffer to base64
+      const base64 = `data:${file.mimetype};base64,${file.buffer.toString(
+        "base64"
+      )}`;
 
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      // Upload to Cloudinary
+      const uploaded = await cloudinary.uploader.upload(base64, {
+        folder: "snapkart/categories",
+        transformation: [
+          { width: 300, height: 300, crop: "fill" },
+          { quality: "auto", fetch_format: "auto" },
+        ],
+      });
 
-      const fileName = `cat-${Date.now()}.webp`;
-      const fullPath = path.join(uploadDir, fileName);
-
-      await sharp(file.buffer)
-        .resize(300, 300, { fit: "cover" })
-        .webp({ quality: 80 })
-        .toFile(fullPath);
-
-      imagePath = `/uploads/categories/${fileName}`;
+      imagePath = uploaded.secure_url;
     }
 
     await prisma.category.create({
       data: {
         name,
         restaurantId: Number(restaurantId),
-        image: imagePath, // ✅ this will now properly store path
+        image: imagePath,
       },
     });
 
@@ -85,6 +80,7 @@ export default async function handler(
       success: true,
       message: "Category created successfully",
     });
+
   } catch (error: any) {
     return res.status(500).json({
       success: false,
