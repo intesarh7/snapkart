@@ -28,7 +28,6 @@ export default async function handler(
     }
 
     const user = auth.user;
-
     const { orderId, reason } = req.body;
 
     if (!orderId || isNaN(Number(orderId))) {
@@ -51,33 +50,8 @@ export default async function handler(
     }
 
     /* ===============================
-       ⏱ 5 MINUTE CANCEL WINDOW
+       🚫 PREVENT DOUBLE CANCEL
     ================================= */
-    const FIVE_MINUTES = 5 * 60 * 1000;
-    const orderTime = new Date(order.createdAt).getTime();
-    const now = Date.now();
-
-    if (now - orderTime > FIVE_MINUTES) {
-      return res.status(400).json({
-        success: false,
-        message: "Cancel window expired (5 minutes limit)",
-      });
-    }
-
-    /* ===============================
-       🚫 BLOCK AFTER PREPARING
-    ================================= */
-    if (
-      order.status === "PREPARING" ||
-      order.status === "OUT_FOR_DELIVERY" ||
-      order.status === "DELIVERED"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Order cannot be cancelled at this stage",
-      });
-    }
-
     if (order.status === "CANCELLED") {
       return res.status(400).json({
         success: false,
@@ -86,7 +60,30 @@ export default async function handler(
     }
 
     /* ===============================
-       💳 ONLINE PAYMENT REFUND
+       ⏱ 5 MINUTE CANCEL WINDOW
+    ================================= */
+    const FIVE_MINUTES = 5 * 60 * 1000;
+    if (Date.now() - new Date(order.createdAt).getTime() > FIVE_MINUTES) {
+      return res.status(400).json({
+        success: false,
+        message: "Cancel window expired (5 minutes limit)",
+      });
+    }
+
+    /* ===============================
+       🚫 BLOCK LATE STAGES
+    ================================= */
+    if (
+      ["PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"].includes(order.status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Order cannot be cancelled at this stage",
+      });
+    }
+
+    /* ===============================
+       💳 ONLINE PAYMENT REFUND (SAFE)
     ================================= */
     if (order.paymentMethod === "ONLINE" && order.paymentStatus === "PAID") {
       const payment = order.payments?.[0];
@@ -98,23 +95,33 @@ export default async function handler(
         });
       }
 
-      await processRefund(payment.id);
+      if (order.refundStatus === "REFUNDED") {
+        return res.status(400).json({
+          success: false,
+          message: "Refund already processed",
+        });
+      }
 
-      await prisma.order.update({
-        where: { id: Number(orderId) },
-        data: {
-          status: "CANCELLED",
-          cancelledByRole: "USER",
-          cancelReason: reason || "User cancelled",
-          cancelledAt: new Date(),
-          refundStatus: "REFUNDED",
-          refundAmount: order.finalAmount,
-        },
+      // 🔥 TRANSACTION WRAP
+      await prisma.$transaction(async (tx) => {
+        await processRefund(payment.id);
+
+        await tx.order.update({
+          where: { id: Number(orderId) },
+          data: {
+            status: "CANCELLED",
+            cancelledByRole: "USER",
+            cancelReason: reason || "User cancelled",
+            cancelledAt: new Date(),
+            refundStatus: "REFUNDED",
+            refundAmount: order.finalAmount,
+          },
+        });
       });
 
       return res.status(200).json({
         success: true,
-        message: "Order cancelled & refund initiated",
+        message: "Order cancelled & refund completed",
       });
     }
 

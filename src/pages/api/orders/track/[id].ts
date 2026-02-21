@@ -1,49 +1,85 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-import prisma from "@/lib/prisma"
-import { verifyRole } from "@/lib/auth";
+import type { NextApiRequest, NextApiResponse } from "next";
+import prisma from "@/lib/prisma";
+import { verifyUser } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-
   if (req.method !== "GET") {
-    return res.status(405).json({ message: "Method not allowed" })
+    return res.status(405).json({
+      success: false,
+      message: "Method not allowed",
+    });
   }
 
   try {
+    /* ===============================
+       🔐 VERIFY USER
+    ================================= */
+    const auth = await verifyUser(req);
 
-   const user = await verifyRole(req, res, ["USER"]);
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" })
+    if (!auth.success) {
+      return res.status(auth.status).json({
+        success: false,
+        message: auth.message,
+      });
     }
 
-    const { id } = req.query
+    const user = auth.user;
 
+    /* ===============================
+       🆔 VALIDATE ORDER ID
+    ================================= */
+    const { id } = req.query;
+
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid order ID required",
+      });
+    }
+
+    const orderId = Number(id);
+
+    /* ===============================
+       🔎 FETCH ORDER
+    ================================= */
     const order = await prisma.order.findUnique({
-      where: { id: Number(id) },
+      where: { id: orderId },
       include: {
         deliveryBoy: true,
         restaurant: true,
-        address: true
-      }
-    })
+        address: true,
+      },
+    });
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" })
+    if (!order || order.userId !== user.id) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
     }
 
+    /* ===============================
+       📍 RETURN TRACKING DATA
+    ================================= */
     return res.status(200).json({
-      deliveryLat: order.deliveryBoy?.latitude,
-      deliveryLng: order.deliveryBoy?.longitude,
-      restaurantLat: order.restaurant?.latitude,
-      restaurantLng: order.restaurant?.longitude,
-      customerLat: order.address?.latitude,
-      customerLng: order.address?.longitude
-    })
+      success: true,
+      deliveryLat: order.deliveryBoy?.latitude ?? null,
+      deliveryLng: order.deliveryBoy?.longitude ?? null,
+      restaurantLat: order.restaurant?.latitude ?? null,
+      restaurantLng: order.restaurant?.longitude ?? null,
+      customerLat: order.address?.latitude ?? null,
+      customerLng: order.address?.longitude ?? null,
+    });
 
   } catch (error) {
-    console.error("Tracking Error:", error)
-    return res.status(500).json({ message: "Server error" })
+    console.error("Tracking Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
