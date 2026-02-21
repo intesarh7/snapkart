@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createPaymentSession } from "@/lib/payment/payment.service";
-import { verifyRole } from "@/lib/auth";
+import { verifyUser } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,7 +11,20 @@ export default async function handler(
       return res.status(405).json({ message: "Method not allowed" });
     }
 
-    const user = await verifyRole(req, ["USER"]);
+      /* ===============================
+           🔐 VERIFY USER
+        ================================= */
+        const auth = await verifyUser(req);
+    
+        if (!auth.success) {
+          return res.status(auth.status).json({
+            success: false,
+            message: auth.message,
+          });
+        }
+    
+        const user = auth.user;
+    
 
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
