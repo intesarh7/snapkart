@@ -2,14 +2,10 @@ import { prisma } from "@/lib/prisma";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { verifyAdmin } from "@/lib/adminAuth";
 import multer from "multer";
-import sharp from "sharp";
-import path from "path";
-import fs from "fs";
+import cloudinary from "@/lib/cloudinary";
 
 export const config = {
-  api: {
-    bodyParser: false,
-  },
+  api: { bodyParser: false },
 };
 
 const upload = multer({
@@ -20,7 +16,7 @@ function runMiddleware(req: any, res: any, fn: any) {
   return new Promise((resolve, reject) => {
     fn(req, res, (result: any) => {
       if (result instanceof Error) return reject(result);
-      return resolve(result);
+      resolve(result);
     });
   });
 }
@@ -29,7 +25,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // ✅ FIXED: method should be PUT
   if (req.method !== "PUT") {
     return res.status(405).json({ message: "Method not allowed" });
   }
@@ -41,7 +36,6 @@ export default async function handler(
 
   const { id, name, restaurantId } = req.body;
 
-  // ✅ FIXED: id required
   if (!id || !name || !restaurantId) {
     return res.status(400).json({
       success: false,
@@ -52,39 +46,45 @@ export default async function handler(
   try {
     let imagePath: string | undefined = undefined;
 
-    // ✅ If new image uploaded
+    const existingCategory = await prisma.category.findUnique({
+      where: { id: Number(id) },
+    });
+
     if ((req as any).file) {
       const file = (req as any).file;
 
-      const uploadDir = path.join(
-        process.cwd(),
-        "public/uploads/categories"
-      );
+      // Delete old image
+      if (existingCategory?.image) {
+        const publicId = existingCategory.image
+          .split("/")
+          .slice(-2)
+          .join("/")
+          .replace(/\.[^/.]+$/, "");
 
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+        await cloudinary.uploader.destroy(publicId);
       }
 
-      const fileName = `cat-${Date.now()}.webp`;
-      const fullPath = path.join(uploadDir, fileName);
+      const base64 = `data:${file.mimetype};base64,${file.buffer.toString(
+        "base64"
+      )}`;
 
-      await sharp(file.buffer)
-        .resize(300, 300, { fit: "cover" })
-        .webp({ quality: 80 })
-        .toFile(fullPath);
+      const uploaded = await cloudinary.uploader.upload(base64, {
+        folder: "snapkart/categories",
+        transformation: [
+          { width: 300, height: 300, crop: "fill" },
+          { quality: "auto", fetch_format: "auto" },
+        ],
+      });
 
-      imagePath = `/uploads/categories/${fileName}`;
+      imagePath = uploaded.secure_url;
     }
 
-    // ✅ FIXED: use update instead of create
     await prisma.category.update({
-      where: {
-        id: Number(id),
-      },
+      where: { id: Number(id) },
       data: {
         name,
         restaurantId: Number(restaurantId),
-        ...(imagePath && { image: imagePath }), // only update image if new uploaded
+        ...(imagePath && { image: imagePath }),
       },
     });
 
@@ -92,6 +92,7 @@ export default async function handler(
       success: true,
       message: "Category updated successfully",
     });
+
   } catch (error: any) {
     return res.status(500).json({
       success: false,
