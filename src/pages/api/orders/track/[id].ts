@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "@/lib/prisma";
-import { verifyUser } from "@/lib/auth";
+import { verifyUser, verifyAdmin } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
@@ -15,22 +15,34 @@ export default async function handler(
 
   try {
     /* ===============================
-       🔐 VERIFY USER
+       🔐 VERIFY ROLE (USER OR ADMIN)
     ================================= */
-    const auth = await verifyUser(req);
 
-    if (!auth.success) {
-      return res.status(auth.status).json({
+    let userAuth: any = null;
+    let adminAuth: any = null;
+
+    try {
+      userAuth = await verifyUser(req);
+    } catch {}
+
+    try {
+      adminAuth = await verifyAdmin(req);
+    } catch {}
+
+    if (!userAuth?.success && !adminAuth?.success) {
+      return res.status(403).json({
         success: false,
-        message: auth.message,
+        message: "Unauthorized access",
       });
     }
 
-    const user = auth.user;
+    const currentUser = userAuth?.success ? userAuth.user : null;
+    const currentAdmin = adminAuth?.success ? adminAuth.user : null;
 
     /* ===============================
        🆔 VALIDATE ORDER ID
     ================================= */
+
     const { id } = req.query;
 
     if (!id || isNaN(Number(id))) {
@@ -45,16 +57,35 @@ export default async function handler(
     /* ===============================
        🔎 FETCH ORDER
     ================================= */
+
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        deliveryBoy: true,
-        restaurant: true,
-        address: true,
+        deliveryBoy: {
+          select: {
+            id: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+        address: {
+          select: {
+            id: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
       },
     });
 
-    if (!order || order.userId !== user.id) {
+    if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found",
@@ -62,8 +93,26 @@ export default async function handler(
     }
 
     /* ===============================
+       🔐 ACCESS CONTROL
+    ================================= */
+
+    // 👤 If USER → can only track own order
+    if (currentUser) {
+      if (order.userId !== currentUser.id) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not allowed to track this order",
+        });
+      }
+    }
+
+    // 🛠 If ADMIN → full access allowed
+    // (no restriction needed)
+
+    /* ===============================
        📍 RETURN TRACKING DATA
     ================================= */
+
     return res.status(200).json({
       success: true,
       deliveryLat: order.deliveryBoy?.latitude ?? null,

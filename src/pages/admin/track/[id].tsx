@@ -1,7 +1,7 @@
 import { useRouter } from "next/router"
 import TrackOrderPage from "@/components/TrackOrderPage"
 
-export default function UserTrack() {
+export default function AdminTrack() {
   const router = useRouter()
   const { id } = router.query
 

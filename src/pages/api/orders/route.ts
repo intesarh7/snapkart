@@ -1,49 +1,87 @@
-import type { NextApiRequest, NextApiResponse } from "next"
+import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-
-  const { startLat, startLng, endLat, endLng } = req.query
-
   try {
+    const { startLat, startLng, endLat, endLng } = req.query;
 
-    const response = await fetch(
-      "https://api.openrouteservice.org/v2/directions/driving-car",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": process.env.ORS_API_KEY as string
-        },
-        body: JSON.stringify({
-          coordinates: [
-            [Number(startLng), Number(startLat)],
-            [Number(endLng), Number(endLat)]
-          ]
-        })
-      }
-    )
-
-    const data = await response.json()
-
-    if (!data.features || data.features.length === 0) {
-    return res.status(400).json({
-        message: "Route not found"
-    })
+    if (
+      !startLat || !startLng ||
+      !endLat || !endLng
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing coordinates",
+      });
     }
 
-    const route = data.features[0]
+    const sLat = Number(startLat);
+    const sLng = Number(startLng);
+    const eLat = Number(endLat);
+    const eLng = Number(endLng);
+
+    if (
+      isNaN(sLat) || isNaN(sLng) ||
+      isNaN(eLat) || isNaN(eLng)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid coordinates",
+      });
+    }
+
+    // ✅ SAME LOCATION PROTECTION
+    const sameLocation =
+      Math.abs(sLat - eLat) < 0.0001 &&
+      Math.abs(sLng - eLng) < 0.0001;
+
+    if (sameLocation) {
+      return res.status(200).json({
+        success: true,
+        coordinates: [],
+        distance: 0,
+        duration: 0,
+      });
+    }
+
+    // 🔥 OSRM API CALL
+    const osrmRes = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${sLng},${sLat};${eLng},${eLat}?overview=full&geometries=geojson`
+    );
+
+    if (!osrmRes.ok) {
+      return res.status(400).json({
+        success: false,
+        message: "Routing service failed",
+      });
+    }
+
+    const data = await osrmRes.json();
+
+    if (!data.routes || data.routes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No route found",
+      });
+    }
+
+    const route = data.routes[0];
 
     return res.status(200).json({
+      success: true,
       coordinates: route.geometry.coordinates,
-      distance: route.properties.summary.distance,
-      duration: route.properties.summary.duration
-    })
+      distance: route.distance,
+      duration: route.duration,
+    });
 
   } catch (error) {
-    console.error(error)
-    return res.status(500).json({ message: "Route error" })
+    console.error("Route API Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }

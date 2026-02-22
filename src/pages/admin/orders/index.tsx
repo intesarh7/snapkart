@@ -353,7 +353,7 @@ export default function AdminOrders() {
 
                     {order.status === "OUT_FOR_DELIVERY" && (
                       <button
-                        onClick={() => router.push(`/user/track/${order.id}`)}
+                        onClick={() => router.push(`/admin/track/${order.id}`)}
                         className="bg-blue-600 text-white px-3 py-1 rounded text-xs"
                       >
                         Track
