@@ -54,6 +54,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/delivery/:path*",
-    "/user/:path*", // ✅ ADD THIS
+    "/user/orders/:path*",
+    "/user/reservations/:path*",
   ],
 };
