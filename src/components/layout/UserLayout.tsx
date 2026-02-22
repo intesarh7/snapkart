@@ -25,39 +25,74 @@ export default function UserLayout({ children, settings }: LayoutProps) {
   const [marqueeHeight, setMarqueeHeight] = useState(0);
 
   useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        setTouchStartY(e.touches[0].clientY);
-      }
-    };
+  let startY = 0;
+  let startX = 0;
+  let isPulling = false;
 
-    const handleTouchMove = (e: TouchEvent) => {
-      setTouchEndY(e.touches[0].clientY);
-    };
+  const threshold = 110; // 👈 how much pull required
 
-    const handleTouchEnd = async () => {
-      if (window.scrollY === 0 && touchEndY - touchStartY > 120) {
-        setIsRefreshing(true);
+  const handleTouchStart = (e: TouchEvent) => {
+    if (window.scrollY !== 0) return;
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    isPulling = true;
+  };
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isPulling) return;
 
-        // 🔥 Soft Refresh (no full reload)
-        router.replace(router.asPath);
+    const currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
 
-        setTimeout(() => {
-          setIsRefreshing(false);
-        }, 800);
-      }
-    };
+    const diffY = currentY - startY;
+    const diffX = currentX - startX;
 
-    window.addEventListener("touchstart", handleTouchStart);
-    window.addEventListener("touchmove", handleTouchMove);
-    window.addEventListener("touchend", handleTouchEnd);
+    // ❌ Ignore horizontal swipes
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      isPulling = false;
+      return;
+    }
 
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [touchStartY, touchEndY, router]);
+    // ❌ Ignore upward swipe
+    if (diffY < 0) {
+      isPulling = false;
+      return;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isPulling) return;
+
+    const diff = window.event
+      ? (window.event as any).changedTouches?.[0]?.clientY - startY
+      : 0;
+
+    if (diff > threshold && window.scrollY === 0) {
+      triggerRefresh();
+    }
+
+    isPulling = false;
+  };
+
+  const triggerRefresh = async () => {
+    setIsRefreshing(true);
+
+    await router.replace(router.asPath);
+
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 700);
+  };
+
+  window.addEventListener("touchstart", handleTouchStart);
+  window.addEventListener("touchmove", handleTouchMove);
+  window.addEventListener("touchend", handleTouchEnd);
+
+  return () => {
+    window.removeEventListener("touchstart", handleTouchStart);
+    window.removeEventListener("touchmove", handleTouchMove);
+    window.removeEventListener("touchend", handleTouchEnd);
+  };
+}, [router]);
 
 
   useEffect(() => {

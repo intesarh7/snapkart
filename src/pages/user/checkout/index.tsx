@@ -32,6 +32,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(1);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [detecting, setDetecting] = useState(false);
   const formatPrice = (amount: number) => {
     return Math.round(Number(amount || 0));
   };
@@ -93,16 +94,36 @@ export default function CheckoutPage() {
 
   /* ---------------- DETECT LOCATION ---------------- */
 
-  const detectLocation = () => {
+  const detectLocation = async () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported");
+      return;
+    }
+
+    setDetecting(true); // 🔥 START LOADING
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        toast.success("Location detected");
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+
+          console.log("Lat:", latitude, "Lng:", longitude);
+
+          // 👉 Yahan aapka existing location fetch / reverse geocode logic hoga
+
+          toast.success("Location detected successfully");
+
+        } catch (error) {
+          toast.error("Unable to fetch location details");
+        } finally {
+          setDetecting(false); // 🔥 STOP LOADING
+        }
       },
-      () => toast.error("Location permission denied")
+      (error) => {
+        toast.error("Location permission denied");
+        setDetecting(false); // 🔥 STOP LOADING
+      },
+      { enableHighAccuracy: true }
     );
   };
   /* ---------------- DELIVERY CALCULATION ---------------- */
@@ -594,10 +615,24 @@ export default function CheckoutPage() {
           {/* DETECT LOCATION */}
           <button
             onClick={detectLocation}
-            className="bg-linear-to-r from-[#FF6B00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white w-full py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+            disabled={detecting}
+            className={`w-full py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2
+    ${detecting
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-linear-to-r from-[#FF6B00] to-orange-600 hover:from-orange-600 hover:to-orange-700 cursor-pointer"
+              } text-white`}
           >
-            <LocateFixed size={18} />
-            Detect My Location
+            {detecting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Detecting Location...
+              </>
+            ) : (
+              <>
+                <LocateFixed size={18} />
+                Detect My Location
+              </>
+            )}
           </button>
 
           {/* ORDER SUMMARY */}

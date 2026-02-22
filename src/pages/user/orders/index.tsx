@@ -306,6 +306,23 @@ export default function MyOrders() {
                 order.status === "OUT_FOR_DELIVERY" &&
                 !canRetry; // 🔥 If retry visible, track hidden
 
+              // 🔥 Cancel Time Logic (5 Minutes Rule)
+              const orderCreatedTime = new Date(order.createdAt).getTime();
+              const now = Date.now();
+              const fiveMinutes = 5 * 60 * 1000;
+
+              const isWithinCancelWindow = now - orderCreatedTime <= fiveMinutes;
+
+              // 🔥 Status Based Restriction
+              const isPreparationStarted =
+                order.status === "PREPARING" ||
+                order.status === "OUT_FOR_DELIVERY";
+
+              const canCancel =
+                isWithinCancelWindow &&
+                !isPreparationStarted &&
+                order.status !== "CANCELLED";
+
               return (
                 <div
                   key={order.id}
@@ -427,9 +444,22 @@ export default function MyOrders() {
                     ))}
                   </div>
 
+                  {/* 🔥 Dynamic Cancellation Message */}
+                    {!canCancel &&
+                      order.status !== "CANCELLED" &&
+                      order.status !== "DELIVERED" && (
+                        <div className="text-[11px] bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-2 rounded-lg">
+                          {isPreparationStarted
+                            ? "This order can no longer be cancelled as it is being prepared or dispatched."
+                            : !isWithinCancelWindow
+                              ? "Cancellation window has expired. Orders can only be cancelled within 5 minutes."
+                              : null}
+                        </div>
+                      )}
+
                   {/* Total + Actions */}
                   <div className="flex justify-between items-center border-t pt-2">
-
+                    
                     <div className="text-right space-y-1">
                       <p className="text-xs text-gray-500">
                         Subtotal: ₹{formatPrice(order.totalAmount || 0)}
@@ -468,18 +498,17 @@ export default function MyOrders() {
                       )}
 
                       {/* Cancel */}
-                      {(order.status === "PENDING" ||
-                        order.status === "CONFIRMED") && (
-                          <button
-                            onClick={() => cancelOrder(order.id)}
-                            disabled={processingId === order.id}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-xs rounded-lg disabled:opacity-50 transition"
-                          >
-                            {processingId === order.id
-                              ? "Cancelling..."
-                              : "Cancel"}
-                          </button>
-                        )}
+                      {canCancel && (
+                        <button
+                          onClick={() => cancelOrder(order.id)}
+                          disabled={processingId === order.id}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-xs rounded-lg disabled:opacity-50 transition"
+                        >
+                          {processingId === order.id
+                            ? "Cancelling..."
+                            : "Cancel"}
+                        </button>
+                      )}
 
                       {/* Track */}
                       {canTrack && (
