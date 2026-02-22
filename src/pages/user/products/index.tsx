@@ -104,7 +104,7 @@ export default function ProductListPage() {
 
           </div>
         </div>
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-3">
 
           {/* Header */}
           <div className="bg-white/90 backdrop-blur border-b- sticky top-0 z-40 mb-8 rounded-xl shadow-sm">

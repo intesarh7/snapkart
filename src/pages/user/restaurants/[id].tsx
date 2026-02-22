@@ -191,7 +191,7 @@ export default function RestaurantDetails() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-3">
           {/* Header */}
           <div className="bg-white/90 backdrop-blur border-b sticky top-0 z-40 shadow-sm">
             <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center gap-4">
@@ -307,7 +307,7 @@ export default function RestaurantDetails() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8 pb-5">
 
               {filteredProducts.map((p: any) => {
                 const hasVariants = p.variants && p.variants.length > 0;

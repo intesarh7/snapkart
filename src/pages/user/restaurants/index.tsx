@@ -89,7 +89,7 @@ export default function AllRestaurants() {
             </h1>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="max-w-7xl mx-auto px-3 md:px-3 pb-5">
 
           {/* Header */}
           <div className="bg-white/90 backdrop-blur border-b sticky top-0 z-40 mb-8 rounded-xl shadow-sm">

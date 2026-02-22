@@ -23,33 +23,33 @@ export default function ProductDetails() {
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [selectedExtras, setSelectedExtras] = useState<number[]>([]);
 
-  if (typeof id !== "string") return null;
+  
 
   const formatPrice = (amount: number) => {
     return Math.round(Number(amount || 0));
   };
 
-  useEffect(() => {
-    if (!id) return;
+useEffect(() => {
+  if (typeof id !== "string") return;
 
-    const fetchProduct = async () => {
-      try {
-        const res = await fetch(`/api/user/products/${id}`);
-        const data = await res.json();
-        setProduct(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchProduct = async () => {
+    try {
+      const res = await fetch(`/api/user/products/${id}`);
+      const data = await res.json();
+      setProduct(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchProduct();
-  }, [id]);
+  fetchProduct();
+}, [id]);
 
   console.log("DETAIL PRODUCT:", product);
 
-  if (loading) {
+  if (loading || typeof id !== "string") {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-10 h-10 border-4 border-black border-t-transparent rounded-full"></div>
@@ -153,9 +153,10 @@ export default function ProductDetails() {
             </p>
           </div>
         </div>
+        <div className="mr-3 ml-3 mb-5">
         {/* Top Bar */}
-        <div className="bg-white/90 backdrop-blur border-b sticky top-0 z-40 mb-6 shadow-sm rounded-xl max-w-7xl mx-auto">
-          <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center gap-4">
+        <div className="bg-white/90 border-b mb-6 shadow-sm rounded-xl max-w-7xl mx-auto px-3 ">
+          <div className="max-w-7xl mx-auto px-3 md:px-6 py-4 flex items-center gap-4">
 
             <button
               onClick={() => router.back()}
@@ -165,7 +166,7 @@ export default function ProductDetails() {
               Back
             </button>
 
-            <div className="text-sm text-gray-500 hidden md:block truncate">
+            <div className="text-sm text-gray-500  md:block truncate">
               <Link
                 href="/user/products"
                 className="mx-1 hover:text-[#FF6B00] transition"
@@ -181,7 +182,7 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-start max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-5 md:gap-5 items-start max-w-7xl mx-auto">
 
           {/* Left Image */}
           <motion.div
@@ -212,7 +213,7 @@ export default function ProductDetails() {
           </motion.div>
 
           {/* Right Content */}
-          <div>
+          <div className="bg-white/90 p-5 shadow-sm rounded-xl">
 
             {/* Restaurant */}
             <Link
@@ -400,6 +401,7 @@ export default function ProductDetails() {
             </button>
 
           </div>
+        </div>
         </div>
       </div>
     </>
