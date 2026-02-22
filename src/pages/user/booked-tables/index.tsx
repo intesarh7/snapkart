@@ -65,7 +65,7 @@ export default function MyBookedTables() {
       }
 
       const cashfree = (window as any).Cashfree({
-        mode: "sandbox",
+        mode: "production",
       });
 
       cashfree.checkout({
