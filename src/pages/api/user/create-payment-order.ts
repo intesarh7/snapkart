@@ -21,7 +21,13 @@ export default async function handler(
     const { type, referenceId, amount } = req.body;
 
     if (!type || !referenceId || !amount) {
-      return res.status(400).json({ message: "Missing fields" });
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const numericAmount = Number(amount);
+
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
     }
 
     /* ================= VALIDATION ================= */
@@ -48,17 +54,16 @@ export default async function handler(
         referenceId: Number(referenceId),
         bookingId: type === "BOOKING" ? Number(referenceId) : null,
         userId: user.id,
-        amount: Number(amount),
+        amount: numericAmount,
         status: "PENDING",
       },
     });
 
-    const gatewayOrderId = `SNAP_${payment.id}`;
+    const gatewayOrderId = `SNAP_${payment.id}_${Date.now()}`;
 
     /* ================= CASHFREE CONFIG ================= */
 
-    const isProduction =
-      process.env.CASHFREE_MODE === "PRODUCTION";
+    const isProduction = process.env.CASHFREE_MODE === "PRODUCTION";
 
     const cashfreeUrl = isProduction
       ? "https://api.cashfree.com/pg/orders"
@@ -73,13 +78,13 @@ export default async function handler(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-client-id": process.env.CASHFREE_CLIENT_ID!,
-        "x-client-secret": process.env.CASHFREE_CLIENT_SECRET!,
+        "x-client-id": process.env.CASHFREE_CLIENT_ID as string,
+        "x-client-secret": process.env.CASHFREE_CLIENT_SECRET as string,
         "x-api-version": "2023-08-01",
       },
       body: JSON.stringify({
         order_id: gatewayOrderId,
-        order_amount: Number(amount),
+        order_amount: numericAmount,
         order_currency: "INR",
         customer_details: {
           customer_id: String(user.id),
@@ -87,29 +92,29 @@ export default async function handler(
           customer_phone: user.phone || "9999999999",
         },
         order_meta: {
-          return_url: `${baseUrl}/user/payment-success`,
+          return_url: `${baseUrl}/user/payment-success?order_id=${gatewayOrderId}`,
         },
       }),
     });
 
     const cashfreeData = await cashfreeRes.json();
 
-    console.log("Cashfree Response:", cashfreeData);
+    console.log("Cashfree status:", cashfreeRes.status);
+    console.log("Cashfree response:", cashfreeData);
 
     if (!cashfreeRes.ok) {
-      return res.status(400).json({
+      return res.status(cashfreeRes.status).json({
         message:
           cashfreeData?.message ||
           "Cashfree order creation failed",
+        error: cashfreeData,
       });
     }
 
-    /* ================= VALIDATE SESSION ID ================= */
-
     if (!cashfreeData?.payment_session_id) {
-      console.error("Invalid Cashfree response:", cashfreeData);
-      return res.status(400).json({
-        message: "payment_session_id not received from Cashfree",
+      return res.status(500).json({
+        message: "payment_session_id not received",
+        error: cashfreeData,
       });
     }
 
@@ -122,17 +127,19 @@ export default async function handler(
       },
     });
 
-    /* ================= SUCCESS RESPONSE ================= */
+    /* ================= SUCCESS ================= */
 
     return res.status(200).json({
       paymentSessionId: cashfreeData.payment_session_id,
       paymentId: payment.id,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Payment create error:", error);
+
     return res.status(500).json({
       message: "Server error while creating payment",
+      error: error.message,
     });
   }
 }
