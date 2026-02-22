@@ -154,7 +154,7 @@ export default function ProductListPage() {
           </div>
 
           {/* Product Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-8">
 
             {products.map((p) => {
 
@@ -323,7 +323,7 @@ export default function ProductListPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex justify-center mt-10 gap-3 flex-wrap">
+          <div className="flex justify-center pt-5 pb-5 gap-3 flex-wrap">
             {Array.from({ length: totalPages }).map((_, i) => (
               <button
                 key={i}

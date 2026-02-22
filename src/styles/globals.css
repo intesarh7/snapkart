@@ -71,3 +71,25 @@ button{
     transform: translateY(40px) translateX(-30px);
   }
 }
+
+
+/* Custom Thin Black Scrollbar */
+
+.thin-scrollbar::-webkit-scrollbar {
+  height: 1px;   /* horizontal scrollbar height */
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: black;
+  border-radius: 100px;
+}
+
+/* Firefox */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: black transparent;
+}
