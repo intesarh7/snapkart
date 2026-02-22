@@ -77,80 +77,80 @@ export default function MyOrders() {
 
 
   // 🔥 RETRY PAYMENT FUNCTION (Production Safe)
-const retryPayment = async (orderId: number) => {
+  const retryPayment = async (orderId: number) => {
 
-  const order = orders.find(o => o.id === orderId)
+    const order = orders.find(o => o.id === orderId)
 
-  // 🔒 Already Paid Protection
-  if (order?.paymentStatus === "PAID") {
-    toast("Payment already completed");
-    return;
-  }
-
-  try {
-    setProcessingId(orderId);
-
-    const res = await fetch("/api/payment/create-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        referenceType: "ORDER",
-        referenceId: orderId,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      toast.error(data.message || "Unable to create payment session");
-      setProcessingId(null);
+    // 🔒 Already Paid Protection
+    if (order?.paymentStatus === "PAID") {
+      toast("Payment already completed");
       return;
     }
 
-    const cashfree = await load({
-      mode:
-        process.env.NEXT_PUBLIC_CASHFREE_MODE === "PRODUCTION"
-          ? "production"
-          : "sandbox",
-    });
+    try {
+      setProcessingId(orderId);
 
-    // 🔥 Open Cashfree Modal
-    await cashfree.checkout({
-      paymentSessionId: data.paymentSessionId,
-      redirectTarget: "_modal",
-    });
+      const res = await fetch("/api/payment/create-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          referenceType: "ORDER",
+          referenceId: orderId,
+        }),
+      });
 
-    // 🔄 Verify Payment
-    const verifyRes = await fetch("/api/payment/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentId: data.paymentId,
-      }),
-    });
+      const data = await res.json();
 
-    const verifyData = await verifyRes.json();
+      if (!res.ok) {
+        toast.error(data.message || "Unable to create payment session");
+        setProcessingId(null);
+        return;
+      }
 
-    if (verifyRes.ok) {
-      toast.success("Payment Successful 🎉");
+      const cashfree = await load({
+        mode:
+          process.env.NEXT_PUBLIC_CASHFREE_MODE === "PRODUCTION"
+            ? "production"
+            : "sandbox",
+      });
 
-      // ⏳ Wait for webhook sync
-      setTimeout(() => {
-        fetchOrders();
-      }, 2000);
+      // 🔥 Open Cashfree Modal
+      await cashfree.checkout({
+        paymentSessionId: data.paymentSessionId,
+        redirectTarget: "_modal",
+      });
 
-    } else {
-      toast.error(verifyData.message || "Payment verification failed");
+      // 🔄 Verify Payment
+      const verifyRes = await fetch("/api/payment/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentId: data.paymentId,
+        }),
+      });
+
+      const verifyData = await verifyRes.json();
+
+      if (verifyRes.ok) {
+        toast.success("Payment Successful 🎉");
+
+        // ⏳ Wait for webhook sync
+        setTimeout(() => {
+          fetchOrders();
+        }, 2000);
+
+      } else {
+        toast.error(verifyData.message || "Payment verification failed");
+      }
+
+    } catch (error) {
+      console.error("Retry Payment Error:", error);
+      toast.error("Retry failed. Please try again.");
+    } finally {
+      setProcessingId(null);
     }
-
-  } catch (error) {
-    console.error("Retry Payment Error:", error);
-    toast.error("Retry failed. Please try again.");
-  } finally {
-    setProcessingId(null);
-  }
-};
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -247,7 +247,7 @@ const retryPayment = async (orderId: number) => {
 
       {/* 🔒 Prevent Google Indexing */}
       <meta name="robots" content="noindex,nofollow" />
-      <div className="min-h-screen bg-linear-to-b from-orange-50 to-white">
+      <div className="min-h-screen bg-linear-to-b from-orange-50 to-white pb-5">
         {/* ===== Small Header Section ===== */}
         <div className="mb-10">
           <div className="bg-linear-to-r from-orange-500 to-orange-600 h-60 flex flex-col justify-end  py-8 px-6 text-center shadow-lg relative overflow-hidden">
@@ -294,212 +294,211 @@ const retryPayment = async (orderId: number) => {
           ) : (
             orders.map((order) => {
 
-  // 🔥 Derived UI States (IMPORTANT)
-  const canRetry =
-    order.paymentMethod === "ONLINE" &&
-    order.paymentStatus !== "PAID" &&
-    order.paymentStatus !== "REFUNDED" &&
-    order.status !== "CANCELLED" &&
-    order.status !== "DELIVERED";
+              // 🔥 Derived UI States (IMPORTANT)
+              const canRetry =
+                order.paymentMethod === "ONLINE" &&
+                order.paymentStatus !== "PAID" &&
+                order.paymentStatus !== "REFUNDED" &&
+                order.status !== "CANCELLED" &&
+                order.status !== "DELIVERED";
 
-  const canTrack =
-    order.status === "OUT_FOR_DELIVERY" &&
-    !canRetry; // 🔥 If retry visible, track hidden
+              const canTrack =
+                order.status === "OUT_FOR_DELIVERY" &&
+                !canRetry; // 🔥 If retry visible, track hidden
 
-  return (
-    <div
-      key={order.id}
-      className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 space-y-3"
-    >
-      {/* TOP ROW */}
-      <div className="flex justify-between items-start">
-
-        <div>
-          <p className="font-semibold text-sm">
-            Order #{order.orderNumber}
-          </p>
-          <p className="text-xs text-gray-400">
-            {new Date(order.createdAt).toLocaleString()}
-          </p>
-
-          <div className="flex gap-2 mt-1 flex-wrap">
-            <span
-              className={`px-2 py-0.5 text-[10px] rounded-full ${getPaymentBadge(
-                order.paymentMethod
-              )}`}
-            >
-              {order.paymentMethod}
-            </span>
-
-            {order.paymentStatus === "PAID" && (
-              <span className="px-2 py-0.5 text-[10px] rounded-full bg-green-100 text-green-700">
-                PAID
-              </span>
-            )}
-
-            {order.refundStatus === "REFUNDED" && (
-              <span className="px-2 py-0.5 text-[10px] rounded-full bg-yellow-100 text-yellow-700">
-                REFUNDED ₹{formatPrice(order.refundAmount || 0)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <span
-          className={`px-3 py-1 text-[10px] font-medium rounded-full ${getStatusColor(
-            order.status
-          )}`}
-        >
-          {order.status.replaceAll("_", " ")}
-        </span>
-      </div>
-
-      {/* Compact Tracking Line */}
-      <div className="flex items-center justify-between relative">
-        {["PENDING", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"]
-          .map((step, index, arr) => {
-            const isActive =
-              arr.indexOf(order.status) >= index;
-
-            return (
-              <div key={step} className="flex-1 text-center relative">
+              return (
                 <div
-                  className={`w-2.5 h-2.5 mx-auto rounded-full ${
-                    isActive ? "bg-orange-500" : "bg-gray-300"
-                  }`}
-                />
-                <p className="text-[9px] mt-1 text-gray-500">
-                  {step.replaceAll("_", " ")}
-                </p>
-              </div>
-            );
-          })}
-      </div>
+                  key={order.id}
+                  className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 space-y-3"
+                >
+                  {/* TOP ROW */}
+                  <div className="flex justify-between items-start">
 
-      {/* Restaurant + Address */}
-      <div className="text-xs text-gray-600">
-        <p className="font-medium text-gray-800">
-          {order.restaurant?.name || "N/A"}
-        </p>
-        <p>
-          {order.address
-            ? `${order.address.address}, ${order.address.city}`
-            : "Address not available"}
-        </p>
-      </div>
+                    <div>
+                      <p className="font-semibold text-sm">
+                        Order #{order.orderNumber}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(order.createdAt).toLocaleString()}
+                      </p>
 
-      {/* Items */}
-      <div className="space-y-2 text-xs">
-        {order.items?.map((item) => (
-          <div
-            key={item.id}
-            className="flex justify-between items-center"
-          >
-            <div className="flex items-center gap-2">
+                      <div className="flex gap-2 mt-1 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] rounded-full ${getPaymentBadge(
+                            order.paymentMethod
+                          )}`}
+                        >
+                          {order.paymentMethod}
+                        </span>
 
-              <div className="relative w-9 h-9 rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
-                <Image
-                  src={
-                    item.product?.image
-                      ? getCloudinaryUrl(item.product.image, 200, 200)
-                      : "/no-image.png"
-                  }
-                  alt={item.product?.name || "Product"}
-                  fill
-                  sizes="36px"
-                  className="object-cover"
-                />
-              </div>
+                        {order.paymentStatus === "PAID" && (
+                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-green-100 text-green-700">
+                            PAID
+                          </span>
+                        )}
 
-              <div className="leading-tight">
-                <p className="text-gray-800 font-medium text-xs">
-                  {item.product?.name || "Item"}
-                </p>
-                <p className="text-[10px] text-gray-400">
-                  Qty: {item.quantity}
-                </p>
-              </div>
-            </div>
+                        {order.refundStatus === "REFUNDED" && (
+                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-yellow-100 text-yellow-700">
+                            REFUNDED ₹{formatPrice(order.refundAmount || 0)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-            <span className="font-medium text-gray-700">
-              ₹{formatPrice(Number(item.price) * Number(item.quantity))}
-            </span>
-          </div>
-        ))}
-      </div>
+                    <span
+                      className={`px-3 py-1 text-[10px] font-medium rounded-full ${getStatusColor(
+                        order.status
+                      )}`}
+                    >
+                      {order.status.replaceAll("_", " ")}
+                    </span>
+                  </div>
 
-      {/* Total + Actions */}
-      <div className="flex justify-between items-center border-t pt-2">
+                  {/* Compact Tracking Line */}
+                  <div className="flex items-center justify-between relative">
+                    {["PENDING", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"]
+                      .map((step, index, arr) => {
+                        const isActive =
+                          arr.indexOf(order.status) >= index;
 
-        <div className="text-right space-y-1">
-          <p className="text-xs text-gray-500">
-            Subtotal: ₹{formatPrice(order.totalAmount || 0)}
-          </p>
+                        return (
+                          <div key={step} className="flex-1 text-center relative">
+                            <div
+                              className={`w-2.5 h-2.5 mx-auto rounded-full ${isActive ? "bg-orange-500" : "bg-gray-300"
+                                }`}
+                            />
+                            <p className="text-[9px] mt-1 text-gray-500">
+                              {step.replaceAll("_", " ")}
+                            </p>
+                          </div>
+                        );
+                      })}
+                  </div>
 
-          <p className="text-xs text-gray-500">
-            Delivery:{" "}
-            {typeof order.deliveryCharge === "number" &&
-              order.deliveryCharge > 0
-              ? `₹${formatPrice(order.deliveryCharge)}`
-              : "FREE"}
-          </p>
+                  {/* Restaurant + Address */}
+                  <div className="text-xs text-gray-600">
+                    <p className="font-medium text-gray-800">
+                      {order.restaurant?.name || "N/A"}
+                    </p>
+                    <p>
+                      {order.address
+                        ? `${order.address.address}, ${order.address.city}`
+                        : "Address not available"}
+                    </p>
+                  </div>
 
-          {order.discount && order.discount > 0 && (
-            <p className="text-xs text-green-600">
-              Discount: -₹{formatPrice(order.discount)}
-            </p>
-          )}
+                  {/* Items */}
+                  <div className="space-y-2 text-xs">
+                    {order.items?.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center"
+                      >
+                        <div className="flex items-center gap-2">
 
-          <p className="font-semibold text-sm text-orange-600 border-t pt-1">
-            Total: ₹{formatPrice(order.finalAmount || 0)}
-          </p>
-        </div>
+                          <div className="relative w-9 h-9 rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
+                            <Image
+                              src={
+                                item.product?.image
+                                  ? getCloudinaryUrl(item.product.image, 200, 200)
+                                  : "/no-image.png"
+                              }
+                              alt={item.product?.name || "Product"}
+                              fill
+                              sizes="36px"
+                              className="object-cover"
+                            />
+                          </div>
 
-        <div className="flex gap-2 flex-wrap">
+                          <div className="leading-tight">
+                            <p className="text-gray-800 font-medium text-xs">
+                              {item.product?.name || "Item"}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              Qty: {item.quantity}
+                            </p>
+                          </div>
+                        </div>
 
-          {/* Retry */}
-          {canRetry && (
-            <button
-              onClick={() => retryPayment(order.id)}
-              disabled={processingId === order.id}
-              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-1 text-xs rounded-lg transition"
-            >
-              Retry
-            </button>
-          )}
+                        <span className="font-medium text-gray-700">
+                          ₹{formatPrice(Number(item.price) * Number(item.quantity))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
 
-          {/* Cancel */}
-          {(order.status === "PENDING" ||
-            order.status === "CONFIRMED") && (
-            <button
-              onClick={() => cancelOrder(order.id)}
-              disabled={processingId === order.id}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-xs rounded-lg disabled:opacity-50 transition"
-            >
-              {processingId === order.id
-                ? "Cancelling..."
-                : "Cancel"}
-            </button>
-          )}
+                  {/* Total + Actions */}
+                  <div className="flex justify-between items-center border-t pt-2">
 
-          {/* Track */}
-          {canTrack && (
-            <button
-              onClick={() =>
-                router.push(`/user/track/${order.id}`)
-              }
-              className="bg-linear-to-r from-orange-500 to-orange-600 text-white px-3 py-1 text-xs rounded-lg shadow hover:shadow-md transition"
-            >
-              Track
-            </button>
-          )}
+                    <div className="text-right space-y-1">
+                      <p className="text-xs text-gray-500">
+                        Subtotal: ₹{formatPrice(order.totalAmount || 0)}
+                      </p>
 
-        </div>
-      </div>
+                      <p className="text-xs text-gray-500">
+                        Delivery:{" "}
+                        {typeof order.deliveryCharge === "number" &&
+                          order.deliveryCharge > 0
+                          ? `₹${formatPrice(order.deliveryCharge)}`
+                          : "FREE"}
+                      </p>
 
-    </div>
-  );
-})
+                      {order.discount && order.discount > 0 && (
+                        <p className="text-xs text-green-600">
+                          Discount: -₹{formatPrice(order.discount)}
+                        </p>
+                      )}
+
+                      <p className="font-semibold text-sm text-orange-600 border-t pt-1">
+                        Total: ₹{formatPrice(order.finalAmount || 0)}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+
+                      {/* Retry */}
+                      {canRetry && (
+                        <button
+                          onClick={() => retryPayment(order.id)}
+                          disabled={processingId === order.id}
+                          className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-1 text-xs rounded-lg transition"
+                        >
+                          Retry
+                        </button>
+                      )}
+
+                      {/* Cancel */}
+                      {(order.status === "PENDING" ||
+                        order.status === "CONFIRMED") && (
+                          <button
+                            onClick={() => cancelOrder(order.id)}
+                            disabled={processingId === order.id}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-xs rounded-lg disabled:opacity-50 transition"
+                          >
+                            {processingId === order.id
+                              ? "Cancelling..."
+                              : "Cancel"}
+                          </button>
+                        )}
+
+                      {/* Track */}
+                      {canTrack && (
+                        <button
+                          onClick={() =>
+                            router.push(`/user/track/${order.id}`)
+                          }
+                          className="bg-linear-to-r from-orange-500 to-orange-600 text-white px-3 py-1 text-xs rounded-lg shadow hover:shadow-md transition"
+                        >
+                          Track
+                        </button>
+                      )}
+
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })
           )}
         </div>
       </div >

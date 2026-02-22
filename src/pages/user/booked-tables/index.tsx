@@ -111,7 +111,7 @@ export default function MyBookedTables() {
 
       {/* 🔒 Prevent Indexing */}
       <meta name="robots" content="noindex,nofollow" />
-      <div className="min-h-screen bg-linear-to-b from-orange-50 to-white">
+      <div className="min-h-screen bg-linear-to-b from-orange-50 to-white pb-5">
         {/* ===== Small Header Section ===== */}
         <div className="mb-10">
           <div className="bg-linear-to-r from-orange-500 to-orange-600 h-60 flex flex-col justify-end  py-8 px-6 text-center shadow-lg relative overflow-hidden">

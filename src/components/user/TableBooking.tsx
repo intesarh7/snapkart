@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
-  interface Props {
-    restaurantId: number; 
-    onClose: () => void;
-  }
+interface Props {
+  restaurantId: number;
+  onClose: () => void;
+}
 
 export default function TableBooking({ restaurantId, onClose }: Props) {
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -17,6 +17,8 @@ export default function TableBooking({ restaurantId, onClose }: Props) {
   const [guests, setGuests] = useState(1);
   const [location, setLocation] = useState("INSIDE");
   const [tables, setTables] = useState<any[]>([]);
+  const formatPrice = (amount: number) => Math.round(amount);
+
   const [selectedTable, setSelectedTable] = useState("");
   const [specialNote, setSpecialNote] = useState("");
 
@@ -90,7 +92,9 @@ export default function TableBooking({ restaurantId, onClose }: Props) {
     0
   );
 
-  const advanceAmount = 0; // agar logic hai to add kar lena
+   const advanceAmount =
+    restaurant?.bookingSetting?.advanceValue || 0;
+
   const totalPayable = preOrderTotal + advanceAmount;
 
   const handleBooking = async () => {
@@ -234,8 +238,8 @@ export default function TableBooking({ restaurantId, onClose }: Props) {
                   key={t.id}
                   onClick={() => setSelectedTable(t.id)}
                   className={`border rounded-lg py-2 text-sm transition ${selectedTable === t.id
-                      ? "bg-[#FF6B00] text-white"
-                      : "hover:bg-gray-100"
+                    ? "bg-[#FF6B00] text-white"
+                    : "hover:bg-gray-100"
                     }`}
                 >
                   Table {t.tableNumber}
@@ -311,16 +315,25 @@ export default function TableBooking({ restaurantId, onClose }: Props) {
         </div>
 
         {/* Summary */}
-        <div className="mt-6 bg-orange-50 p-4 rounded-xl text-sm">
+        <div className="mt-6 bg-orange-50 p-4 rounded-xl space-y-2 text-sm">
+
           <div className="flex justify-between">
             <span>Pre-order Total</span>
-            <span>₹{preOrderTotal}</span>
+            <span>₹{formatPrice(preOrderTotal)}</span>
           </div>
+
+          {advanceAmount > 0 && (
+            <div className="flex justify-between">
+              <span>Advance Booking Amount</span>
+              <span>₹{advanceAmount}</span>
+            </div>
+          )}
 
           <div className="flex justify-between font-semibold text-[#FF6B00]">
             <span>Total Payable</span>
-            <span>₹{totalPayable}</span>
+            <span>₹{formatPrice(totalPayable)}</span>
           </div>
+
         </div>
 
         <button

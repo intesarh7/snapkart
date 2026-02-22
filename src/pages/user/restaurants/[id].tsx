@@ -172,7 +172,7 @@ export default function RestaurantDetails() {
           url={`${process.env.NEXT_PUBLIC_SITE_URL}/user/restaurants/${restaurant?.id}`}
         />
       )}
-      <div className="min-h-screen bg-linear-to-b from-orange-50 to-white">
+      <div className="min-h-screen bg-linear-to-b from-orange-50 to-white pb-5">
 
         {/* ===== Small Header Section ===== */}
         <div className="mb-10">
