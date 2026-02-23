@@ -25,6 +25,22 @@ if (!amount || amount <= 0) {
   throw new Error("Invalid payment amount")
 }
 
+// 🔥 Fetch User Details for Cashfree
+const dbUser = await prisma.user.findUnique({
+  where: { id: userId }
+})
+
+if (!dbUser) {
+  throw new Error("User not found")
+}
+
+// Ensure phone is valid 10 digit numeric
+const formattedPhone = dbUser.phone
+  ? dbUser.phone.toString().replace(/\D/g, "").slice(-10)
+  : "9999999999"
+
+const formattedEmail = dbUser.email || "noemail@snapkart.com"
+
   if (referenceType === "BOOKING") {
     const booking: any = await prisma.$queryRawUnsafe(
       `SELECT bookingAmount FROM Booking WHERE id = ?`,
@@ -53,10 +69,10 @@ if (!amount || amount <= 0) {
   order_id: `SNAP_${payment.id}_${Math.floor(Math.random()*10000)}`,
   order_note: `SnapKart Payment ${payment.id}`,
   customer_details: {
-    customer_id: userId.toString(),
-    customer_email: "test@snapkart.com",
-    customer_phone: "9999999999"
-  }
+  customer_id: userId.toString(),
+  customer_email: formattedEmail,
+  customer_phone: formattedPhone
+}
 })
 
   // 3️⃣ Update Payment with gateway data

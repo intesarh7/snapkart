@@ -107,7 +107,14 @@ export default function CheckoutPage() {
         try {
           const { latitude, longitude } = position.coords;
 
-          console.log("Lat:", latitude, "Lng:", longitude);
+      console.log("Lat:", latitude, "Lng:", longitude);
+
+
+      // 🔥 SAVE LOCATION STATE
+      setUserLocation({
+        lat: latitude,
+        lng: longitude,
+      });
 
           // 👉 Yahan aapka existing location fetch / reverse geocode logic hoga
 

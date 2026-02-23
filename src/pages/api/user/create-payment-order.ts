@@ -26,6 +26,28 @@ export default async function handler(
 
     const numericAmount = Number(amount);
 
+    // 🔥 Fetch fresh user details from DB
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!dbUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 🔥 Sanitize phone for Cashfree (10 digit numeric required)
+    const formattedPhone = dbUser.phone
+      ? dbUser.phone.toString().replace(/\D/g, "").slice(-10)
+      : null;
+
+    if (!formattedPhone || formattedPhone.length !== 10) {
+      return res.status(400).json({
+        message: "Invalid phone number for payment",
+      });
+    }
+
+    const formattedEmail = dbUser.email || "noemail@snapkart.com";
+
     if (isNaN(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
@@ -88,8 +110,8 @@ export default async function handler(
         order_currency: "INR",
         customer_details: {
           customer_id: String(user.id),
-          customer_email: user.email,
-          customer_phone: user.phone || "9999999999",
+          customer_email: formattedEmail,
+          customer_phone: formattedPhone,
         },
         order_meta: {
           return_url: `${baseUrl}/user/payment-success?order_id=${gatewayOrderId}`,
