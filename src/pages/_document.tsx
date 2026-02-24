@@ -8,6 +8,10 @@ export default function Document() {
         {/* Charset */}
         <meta charSet="UTF-8" />
 
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ff4d4f" />
+
         {/* Preconnect Example */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
 
