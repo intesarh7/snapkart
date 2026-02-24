@@ -116,6 +116,11 @@ export default function AdminSidebar() {
       href: "/admin/settings",
       icon: Settings,
     },
+    {
+      name: "Deleted Users",
+      href: "/admin/deleted-users",
+      icon: Store,
+    },
   ];
 
   return (

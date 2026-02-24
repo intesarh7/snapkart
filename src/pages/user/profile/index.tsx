@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Seo from "@/components/Seo";
 
 interface Address {
@@ -22,10 +23,11 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [editAddressData, setEditAddressData] = useState<any>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editProfileData, setEditProfileData] = useState({
-    name: "",
-    phone: "",
-  });
+  const [editProfileData, setEditProfileData] = useState({ name: "", phone: "", });
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [type, setType] = useState<"success" | "error" | "">("");
+  const router = useRouter();
 
   const [newAddress, setNewAddress] = useState({
     fullName: "",
@@ -182,6 +184,36 @@ export default function UserProfile() {
     fetchAddresses();
   };
 
+/* ================= DELETE ACCOUNT ================= */
+const handleDeleteAccount = async () => {
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/user/delete-account", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setType("success");
+        setMessage("Account deleted successfully");
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
+      } else {
+        setType("error");
+        setMessage(data.message || "Something went wrong");
+      }
+    } catch (err) {
+      setType("error");
+      setMessage("Server error");
+    }
+
+    setLoading(false);
+  };
+
+
   if (loading) return <div className="p-10 text-center">Loading...</div>;
 
   return (
@@ -189,7 +221,7 @@ export default function UserProfile() {
       <Seo
         title={`${user?.name || "My"} Profile | SnapKart`}
         description="Manage your SnapKart profile."
-        url="https://yourdomain.com/user/profile"
+        url="https://snapkart.in/user/profile"
       />
       <meta name="robots" content="noindex,nofollow" />
       {/* ===== Small Header Section ===== */}
@@ -304,6 +336,13 @@ export default function UserProfile() {
           </button>
         </div>
 
+         <button
+        onClick={() => setOpen(true)}
+        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+      >
+        Delete Account
+      </button>
+
         {/* ================= EDIT MODAL ================= */}
         {editAddressData && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -350,6 +389,53 @@ export default function UserProfile() {
             </div>
           </div>
         )}
+
+
+        {/* CONFIRM MODAL */}
+      {open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-fadeIn">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">
+              Confirm Account Deletion
+            </h2>
+
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to delete your account? This action can delete your account. 
+              If you want to restore please contact us, otherwise after 30 days your account will be deleted permanently.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setOpen(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleDeleteAccount}
+                disabled={loading}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition disabled:opacity-50"
+              >
+                {loading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+
+            {/* RESPONSE MESSAGE */}
+            {message && (
+              <div
+                className={`mt-4 text-sm font-medium ${
+                  type === "success"
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {message}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       </div>
     </>
   );

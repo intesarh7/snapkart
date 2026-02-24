@@ -4,6 +4,7 @@ import { useRef } from "react";
 import toast from "react-hot-toast";
 const defaultSlugs = [
   "privacy-policy",
+  "delete-account",
   "terms-conditions",
   "refund-policy",
   "help-center",

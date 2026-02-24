@@ -18,7 +18,7 @@ export default function DynamicPage() {
 
   if (!page) return <div className="p-10"><div className="animate-pulse h-40 bg-gray-200 rounded-xl" /></div>;
 
-  const siteUrl = "https://yourdomain.com"; // change later
+  const siteUrl = "https://snapkart.in"; // change later
   const pageUrl = `${siteUrl}/${slug}`;
 
   return (

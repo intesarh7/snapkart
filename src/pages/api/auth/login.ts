@@ -43,6 +43,15 @@ export default async function handler(
       });
     }
 
+    /* ---------------- SOFT DELETE CHECK ---------------- */
+
+     if (user.isDeleted) {
+      return res.status(403).json({
+        message: "Your account has been deleted",
+      });
+    }
+
+
     /* ---------------- CHECK ACTIVE STATUS ---------------- */
 
     if (!user.isActive) {
@@ -66,6 +75,7 @@ export default async function handler(
       });
     }
 
+   
     /* ---------------- JWT SECRET CHECK ---------------- */
 
     if (!process.env.JWT_SECRET) {

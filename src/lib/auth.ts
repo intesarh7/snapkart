@@ -114,6 +114,15 @@ const verifyBase = async (
     };
   }
 
+  // 🔥 SOFT DELETE CHECK
+  if (user.isDeleted) {
+    return {
+      success: false,
+      status: 403,
+      message: "Account has been deleted",
+    };
+  }
+
   const normalizedRole = user.role?.toUpperCase() as UserRole;
 
   if (!allowedRoles.includes(normalizedRole)) {
