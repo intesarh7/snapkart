@@ -57,74 +57,88 @@ export default function MobileNav() {
   return (
     <>
       <div
-  className={`fixed bottom-2 left-1/2 -translate-x-1/2 
+        className={`fixed bottom-2 left-1/2 -translate-x-1/2 
   w-[95%] bg-white/95 backdrop-blur-xl shadow-2xl 
   rounded-2xl items-center px-6 py-4 md:hidden z-50 border
   grid ${isLoggedIn ? "grid-cols-6" : "grid-cols-3"}`}
->
+      >
 
         {/* COL 1 */}
-<Link href="/" className="flex justify-center">
-  <Home size={24} />
-</Link>
+        <Link href="/" className="flex justify-center">
+          <Home size={24} />
+        </Link>
 
-{/* BEFORE LOGIN STRUCTURE */}
-{!isLoggedIn && (
-  <>
-    {/* COL 2 → CART CENTER */}
-    <div className="relative -mt-10 flex justify-center">
-      <button
-        onClick={() => setOpenCart(true)}
-        className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
-      >
-        <ShoppingCart size={24} />
-      </button>
-    </div>
+        {/* BEFORE LOGIN STRUCTURE */}
+        {!isLoggedIn && (
+          <>
+            {/* COL 2 → CART CENTER */}
+            <div className="relative -mt-10 flex justify-center">
+              <button
+                onClick={() => setOpenCart(true)}
+                className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
+              >
+                <ShoppingCart size={24} />
+              </button>
+            </div>
 
-    {/* COL 3 */}
-    <Link href="/login" className="flex justify-center text-orange-500">
-      <User size={24} />
-    </Link>
-  </>
-)}
+            {/* COL 3 */}
+            <Link href="/login" className="flex justify-center text-orange-500">
+              <User size={24} />
+            </Link>
+          </>
+        )}
 
-{/* AFTER LOGIN STRUCTURE */}
-{isLoggedIn && (
-  <>
-    {/* COL 2 */}
-    <Link href="/user/booked-tables" className="flex justify-center">
-      <Utensils size={22} />
-    </Link>
+        {/* AFTER LOGIN STRUCTURE */}
+        {isLoggedIn && (
+          <>
+            {/* COL 2 */}
+            <Link href="/user/booked-tables" className="flex justify-center">
+              <Utensils size={22} />
+            </Link>
 
-    {/* COL 3 */}
-    <Link href="/user/orders" className="flex justify-center">
-      <Package size={22} />
-    </Link>
+            {/* COL 3 */}
+            <Link href="/user/orders" className="flex justify-center">
+              <Package size={22} />
+            </Link>
 
-    {/* COL 4 → CART EXACT CENTER */}
-    <div className="relative -mt-10 flex justify-center">
-      <button
-        onClick={() => setOpenCart(true)}
-        className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
-      >
-        <ShoppingCart size={24} />
-      </button>
-    </div>
+            {/* COL 4 → CART EXACT CENTER */}
+            <div className="relative -mt-10 flex justify-center">
+              <button
+                onClick={() => setOpenCart(true)}
+                className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
+              >
+                <ShoppingCart size={24} />
 
-    {/* COL 5 */}
-    <Link href="/user/profile" className="flex justify-center">
-      <User size={22} />
-    </Link>
+                {mounted && totalItems > 0 && (
+                  <motion.span
+                    key={totalItems}
+                    initial={false}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 400 }}
+                    className="absolute -top-2 -right-2 bg-black text-white text-[10px] px-2 py-0.5 rounded-full"
+                  >
+                    {totalItems}
+                  </motion.span>
+                )}
+              </button>
+            </div>
 
-    {/* COL 6 */}
-    <button onClick={handleLogout} className="flex justify-center">
-      <LogOut size={22} />
-    </button>
 
-    {/* COL 7 (Optional placeholder for balance symmetry) */}
-    <div />
-  </>
-)}
+
+            {/* COL 5 */}
+            <Link href="/user/profile" className="flex justify-center">
+              <User size={22} />
+            </Link>
+
+            {/* COL 6 */}
+            <button onClick={handleLogout} className="flex justify-center">
+              <LogOut size={22} />
+            </button>
+
+            {/* COL 7 (Optional placeholder for balance symmetry) */}
+            <div />
+          </>
+        )}
       </div>
 
       <CartDrawer
