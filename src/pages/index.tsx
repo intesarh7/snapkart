@@ -917,20 +917,103 @@ leading-snug">
             </div>
 
             <div className="p-4">
-              <h3 className="font-semibold text-base mb-1 hover:text-[#FF6B00] transition">
-                {p.name}
-              </h3>
 
-              <div className="flex items-center text-sm text-gray-600 gap-2 mb-2">
+            <div className="flex items-center text-sm text-gray-600 gap-3 mb-2">
+              <div className="flex items-center gap-1 text-yellow-500">
                 <Star size={14} fill="#FACC15" />
-                <span>{p.rating?.toFixed(1) || "0.0"}</span>
-                <span>({reviewCount})</span>
+                <span className="font-medium text-gray-800">
+                  {p.rating?.toFixed(1) || "0.0"}
+                </span>
+                <span className="text-gray-500">
+                  ({reviewCount})
+                </span>
               </div>
 
-              <div className="text-lg font-bold text-[#FF6B00]">
-                ₹{formatPrice(startingFinalPrice)}
-              </div>
+              <span>• {deliveryTime}</span>
             </div>
+
+            <h3 className="font-semibold text-lg mb-1 hover:text-[#FF6B00] transition">
+              {p.name}
+            </h3>
+
+            <p className="text-sm text-gray-500">
+              {p.category}
+            </p>
+
+            <p className="text-sm text-gray-500 mt-1">
+              {p.restaurant?.name}
+            </p>
+
+            <p className="flex items-center text-gray-500 text-sm mt-2">
+              <MapPin size={14} className="mr-1" />
+              {p.restaurant?.address || "Location not available"}
+            </p>
+
+            {hasVariants && (
+              <p className="text-xs text-gray-500 mt-2">
+                {p.variants.length} Sizes Available
+              </p>
+            )}
+
+            <div className="flex items-center justify-between mt-4">
+
+              <div>
+                {hasDiscount && (
+                  <span className="text-gray-400 line-through text-sm mr-2">
+                    ₹{formatPrice(startingPrice)}
+                  </span>
+                )}
+
+                <span className="text-lg font-bold text-[#FF6B00]">
+                  ₹{formatPrice(startingFinalPrice)}
+                </span>
+
+                {hasDiscount && (
+                  <span className="text-green-600 text-xs ml-2 font-medium">
+                    {discountPercent}% OFF
+                  </span>
+                )}
+
+                {hasVariants && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Starts from)
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  addToCart({
+                    id: p.id,
+                    name: p.name,
+                    price: hasVariants ? p.variants[0].price : startingPrice,
+                    finalPrice: hasVariants
+                      ? p.variants[0].finalPrice || p.variants[0].price
+                      : startingFinalPrice,
+                    image: p.image,
+                    restaurantId: p.restaurantId,
+                    variantId: hasVariants ? p.variants[0].id : null,
+                    variantName: hasVariants ? p.variants[0].name : null,
+                    hasVariants: hasVariants,
+                    extras: [],
+                    variants: p.variants || [],
+                    availableExtras: p.extras || [],
+                  });
+
+                  toast.success("Added to cart 🛒");
+                }}
+                className="flex items-center gap-2 bg-[#FF6B00] text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition text-sm"
+              >
+                <ShoppingCart size={16} />
+                Add
+              </button>
+
+            </div>
+
+          </div>
 
           </Link>
         </motion.div>
