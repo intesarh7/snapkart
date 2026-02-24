@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.snapkart.food",
+      "sha256_cert_fingerprints": [
+        "SHA256: E6:E3:AD:E3:39:C1:0A:9A:54:B6:70:A5:6F:15:23:57:CC:C6:04:87:D8:3E:ED:83:78:1A:9B:08:B5:A0:62:D1"
+      ]
+    }
+  }
+]
