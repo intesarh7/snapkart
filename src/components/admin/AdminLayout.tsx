@@ -12,46 +12,101 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-
+ 
   const [touchStartY, setTouchStartY] = useState<number>(0);
   const [touchEndY, setTouchEndY] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [marqueeHeight, setMarqueeHeight] = useState(0);
 
   useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        setTouchStartY(e.touches[0].clientY);
-      }
+  let startY = 0;
+  let startX = 0;
+  let isPulling = false;
+
+  const threshold = 110; // 👈 how much pull required
+
+  const handleTouchStart = (e: TouchEvent) => {
+    if (window.scrollY !== 0) return;
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    isPulling = true;
+  };
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isPulling) return;
+
+    const currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
+
+    const diffY = currentY - startY;
+    const diffX = currentX - startX;
+
+    // ❌ Ignore horizontal swipes
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      isPulling = false;
+      return;
+    }
+
+    // ❌ Ignore upward swipe
+    if (diffY < 0) {
+      isPulling = false;
+      return;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isPulling) return;
+
+    const diff = window.event
+      ? (window.event as any).changedTouches?.[0]?.clientY - startY
+      : 0;
+
+    if (diff > threshold && window.scrollY === 0) {
+      triggerRefresh();
+    }
+
+    isPulling = false;
+  };
+
+  const triggerRefresh = async () => {
+    setIsRefreshing(true);
+
+    await router.replace(router.asPath);
+
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 700);
+  };
+
+  window.addEventListener("touchstart", handleTouchStart);
+  window.addEventListener("touchmove", handleTouchMove);
+  window.addEventListener("touchend", handleTouchEnd);
+
+  return () => {
+    window.removeEventListener("touchstart", handleTouchStart);
+    window.removeEventListener("touchmove", handleTouchMove);
+    window.removeEventListener("touchend", handleTouchEnd);
+  };
+}, [router]);
+
+
+  useEffect(() => {
+    const updateHeight = () => {
+      const el = document.getElementById("offer-marquee");
+      setMarqueeHeight(el ? el.offsetHeight : 0);
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      setTouchEndY(e.touches[0].clientY);
-    };
+    updateHeight();
 
-    const handleTouchEnd = async () => {
-      // 🔥 Admin me accidental refresh avoid karne ke liye threshold 150px
-      if (window.scrollY === 0 && touchEndY - touchStartY > 150) {
-        setIsRefreshing(true);
+    const observer = new MutationObserver(updateHeight);
+    observer.observe(document.body, { childList: true, subtree: true });
 
-        // Soft refresh (no hard reload)
-        router.replace(router.asPath);
-
-        setTimeout(() => {
-          setIsRefreshing(false);
-        }, 800);
-      }
-    };
-
-    window.addEventListener("touchstart", handleTouchStart);
-    window.addEventListener("touchmove", handleTouchMove);
-    window.addEventListener("touchend", handleTouchEnd);
+    window.addEventListener("resize", updateHeight);
 
     return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
+      observer.disconnect();
+      window.removeEventListener("resize", updateHeight);
     };
-  }, [touchStartY, touchEndY, router]);
+  }, []);
 
   return (
     <div className="flex relative">
