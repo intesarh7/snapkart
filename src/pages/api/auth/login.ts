@@ -106,7 +106,7 @@ export default async function handler(
       serialize("snapkart_token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: "none",
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       })
