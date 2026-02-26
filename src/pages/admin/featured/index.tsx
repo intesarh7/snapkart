@@ -165,7 +165,7 @@ const res = await fetch("/api/admin/featured/create", {
               </p>
 
               <p className="font-semibold mt-2">
-                ${item.price}
+                ₹{item.price}
               </p>
 
               <div className="flex justify-between mt-4">

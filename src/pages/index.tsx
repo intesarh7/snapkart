@@ -342,16 +342,7 @@ SCROLL ANIMATION VARIANT
                   setShowDropdown(true);
                 }}
                 onFocus={() => setShowDropdown(true)}
-                className="w-full
-rounded-full
-pl-12 pr-4 sm:pr-6
-py-3 sm:py-4
-text-black
-bg-white
-shadow-lg
-focus:outline-none focus:ring-2 focus:ring-[#FF6B00] focus:shadow-xl
-transition-all duration-300"
-              />
+                className="w-full rounded-full pl-12 pr-4 sm:pr-6 py-3 sm:py-4 text-black bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF6B00] focus:shadow-xl transition-all duration-300"/>
 
               {/* Toggle Buttons */}
               <div className="flex justify-center gap-3 mt-4">
@@ -488,15 +479,7 @@ transition-all duration-300"
                     }
                     className="flex flex-col items-center group cursor-pointer"
                   >
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20
-bg-white
-rounded-full
-flex items-center justify-center
-shadow-md
-transition-all duration-300 ease-out
-group-hover:scale-110 group-hover:shadow-xl
-active:scale-95
-">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out group-hover:scale-110 group-hover:shadow-xl active:scale-95">
                       <span className="text-lg font-bold text-gray-700 p-2">
                         <Image
                           src={getCloudinaryUrl(cat.image, 200, 200)}
@@ -508,12 +491,7 @@ active:scale-95
                       </span>
                     </div>
 
-                    <p className="mt-3 sm:mt-4
-text-white
-font-semibold
-text-base sm:text-lg md:text-xl
-text-center
-leading-snug">
+                    <p className="mt-3 sm:mt-4 text-white font-semibold text-base sm:text-lg md:text-xl text-center leading-snug">
                       {cat.name}
                     </p>
                   </div>
@@ -534,45 +512,51 @@ leading-snug">
 
                 {featured.map((item) => (
                   <div
-                    key={item.id}
-                    className="relative bg-[#f3ede6] rounded-3xl overflow-hidden p-8 h-70 flex flex-col justify-between shadow-md"
-                  >
+    key={item.id}
+    className="relative rounded-3xl overflow-hidden h-80 flex flex-col justify-between shadow-md group"
+  >
 
-                    {/* TAG */}
-                    {item.tag && (
-                      <span className="bg-yellow-400 text-black text-sm font-semibold px-4 py-2 rounded-full w-fit">
-                        {item.tag}
-                      </span>
-                    )}
+    {/* BACKGROUND IMAGE */}
+    {item.image && (
+      <div
+        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+        style={{
+          backgroundImage: `url(${getCloudinaryUrl(item.image, 800, 800)})`
+        }}
+      />
+    )}
 
-                    {/* TITLE */}
-                    <h3 className="text-3xl font-bold text-black leading-tight">
-                      {item.title}
-                    </h3>
+    {/* DARK OVERLAY */}
+    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
 
-                    {/* PRICE */}
-                    {item.price && (
-                      <div className="bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-2xl w-fit">
-                        ₹{item.price}
-                        <span className="block text-xs font-medium">
-                          Only
-                        </span>
-                      </div>
-                    )}
+    {/* CONTENT */}
+    <div className="relative z-10 p-8 flex flex-col justify-between h-full text-white">
 
-                    {/* IMAGE */}
-                    {item.image && (
-                      <Image
-                        src={getCloudinaryUrl(item.image, 500, 500)}
-                        alt={item.title}
-                        width={300}
-                        height={300}
-                        className="absolute bottom-0 right-0 w-44 object-contain"
-                        loading="lazy"
-                      />
-                    )}
+      {/* TAG */}
+      {item.tag && (
+        <span className="bg-yellow-400 text-black text-sm font-semibold px-4 py-2 rounded-full w-fit">
+          {item.tag}
+        </span>
+      )}
 
-                  </div>
+      {/* TITLE */}
+      <h3 className="text-3xl font-bold leading-tight">
+        {item.title}
+      </h3>
+
+      {/* PRICE */}
+      {item.price && (
+        <div className="bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-2xl w-fit">
+          ₹{item.price}
+          <span className="block text-xs font-medium">
+            Only
+          </span>
+        </div>
+      )}
+
+    </div>
+
+  </div>
                 ))}
 
               </div>
