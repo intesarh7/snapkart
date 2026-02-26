@@ -78,6 +78,17 @@ export default function MobileNav() {
                 className="relative bg-orange-500 text-white p-4 rounded-full shadow-xl hover:bg-orange-600 transition"
               >
                 <ShoppingCart size={24} />
+                {mounted && totalItems > 0 && (
+                  <motion.span
+                    key={totalItems}
+                    initial={false}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 400 }}
+                    className="absolute -top-2 -right-2 bg-black text-white text-[10px] px-2 py-0.5 rounded-full"
+                  >
+                    {totalItems}
+                  </motion.span>
+                )}
               </button>
             </div>
 
