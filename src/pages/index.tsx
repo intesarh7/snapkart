@@ -35,13 +35,15 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [timeLeft, setTimeLeft] = useState("");
   const [featured, setFeatured] = useState<FeaturedItem[]>([]);
   const [offers, setOffers] = useState<any[]>([]);
 
   const [showAddressPopup, setShowAddressPopup] = useState(false);
-const skeletonArray = Array.from({ length: 3 });
+  const skeletonArray = Array.from({ length: 3 });
+  const categorySkeleton = Array.from({ length: 6 });
   const formatPrice = (amount: number) => {
     return Math.round(Number(amount || 0));
   };
@@ -54,7 +56,7 @@ const skeletonArray = Array.from({ length: 3 });
     restaurantId: number;
   }
 
- 
+
 
   useEffect(() => {
     const shouldShow = localStorage.getItem("showAddressPopup");
@@ -81,7 +83,7 @@ const skeletonArray = Array.from({ length: 3 });
     image?: string | null;
   }
 
- useEffect(() => {
+  useEffect(() => {
     const fetchFeatured = async () => {
       try {
         const res = await fetch("/api/user/featured");
@@ -103,7 +105,7 @@ const skeletonArray = Array.from({ length: 3 });
     fetchFeatured();
   }, []);
 
-  
+
 
   useEffect(() => {
     fetch("/api/user/special-offer")
@@ -288,8 +290,8 @@ SCROLL ANIMATION VARIANT
             ? `Discover top restaurants in ${locationName}. Order food online with fast delivery on SnapKart.`
             : "Discover top restaurants near you. Order food online with fast delivery on SnapKart."
         }
-        image="https://yourdomain.com/og-home.jpg"
-        url="https://yourdomain.com/"
+        image="https://snapkart.in/og-home.jpg"
+        url="https://snapkart.in/"
       />
       <div className="overflow-hidden">
 
@@ -480,18 +482,35 @@ SCROLL ANIMATION VARIANT
               className="mt-10"
             >
               <div className="flex flex-wrap justify-center gap-8">
-                {categories.map((cat: any) => (
-                  <div
-                    key={cat.id}
-                    onClick={() =>
-                      router.push(
-                        `/user/restaurants/${cat.restaurantId}?categoryId=${cat.id}`
-                      )
-                    }
-                    className="flex flex-col items-center group cursor-pointer"
-                  >
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out group-hover:scale-110 group-hover:shadow-xl active:scale-95">
-                      <span className="text-lg font-bold text-gray-700 p-2">
+
+                {/* ================= SKELETON ================= */}
+                {categoriesLoading &&
+                  categorySkeleton.map((_, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col items-center animate-pulse"
+                    >
+                      {/* Circle Skeleton */}
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gray-300 rounded-full shadow-md" />
+
+                      {/* Text Skeleton */}
+                      <div className="mt-3 sm:mt-4 w-20 h-4 bg-gray-300 rounded" />
+                    </div>
+                  ))}
+
+                {/* ================= REAL DATA ================= */}
+                {!categoriesLoading &&
+                  categories.map((cat: any) => (
+                    <div
+                      key={cat.id}
+                      onClick={() =>
+                        router.push(
+                          `/user/restaurants/${cat.restaurantId}?categoryId=${cat.id}`
+                        )
+                      }
+                      className="flex flex-col items-center group cursor-pointer"
+                    >
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out group-hover:scale-110 group-hover:shadow-xl active:scale-95">
                         <Image
                           src={getCloudinaryUrl(cat.image, 200, 200)}
                           alt={cat.name}
@@ -499,14 +518,14 @@ SCROLL ANIMATION VARIANT
                           height={100}
                           className="object-cover rounded-full"
                         />
-                      </span>
-                    </div>
+                      </div>
 
-                    <p className="mt-3 sm:mt-4 text-white font-semibold text-base sm:text-lg md:text-xl text-center leading-snug">
-                      {cat.name}
-                    </p>
-                  </div>
-                ))}
+                      <p className="mt-3 sm:mt-4 text-white font-semibold text-base sm:text-lg md:text-xl text-center leading-snug">
+                        {cat.name}
+                      </p>
+                    </div>
+                  ))}
+
               </div>
             </motion.div>
           </div>
@@ -519,101 +538,101 @@ SCROLL ANIMATION VARIANT
         >
           <section className="py-12">
             <div className="max-w-7xl mx-auto px-6">
-             <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-3 gap-8">
 
-  {loading
-    ? skeletonArray.map((_, index) => (
-        <div
-          key={index}
-          className="relative rounded-3xl overflow-hidden h-80 shadow-md bg-gray-200 animate-pulse"
-        >
-          {/* Image Skeleton */}
-          <div className="absolute inset-0 bg-gray-300" />
+                {loading
+                  ? skeletonArray.map((_, index) => (
+                    <div
+                      key={index}
+                      className="relative rounded-3xl overflow-hidden h-80 shadow-md bg-gray-200 animate-pulse"
+                    >
+                      {/* Image Skeleton */}
+                      <div className="absolute inset-0 bg-gray-300" />
 
-          <div className="relative z-10 p-8 flex flex-col justify-between h-full">
+                      <div className="relative z-10 p-8 flex flex-col justify-between h-full">
 
-            {/* Tag Skeleton */}
-            <div className="w-24 h-6 bg-gray-300 rounded-full" />
+                        {/* Tag Skeleton */}
+                        <div className="w-24 h-6 bg-gray-300 rounded-full" />
 
-            {/* Title Skeleton */}
-            <div className="space-y-3">
-              <div className="h-6 bg-gray-300 rounded w-3/4" />
-              <div className="h-6 bg-gray-300 rounded w-1/2" />
-            </div>
+                        {/* Title Skeleton */}
+                        <div className="space-y-3">
+                          <div className="h-6 bg-gray-300 rounded w-3/4" />
+                          <div className="h-6 bg-gray-300 rounded w-1/2" />
+                        </div>
 
-            {/* Price Skeleton */}
-            <div className="w-28 h-12 bg-gray-300 rounded-2xl" />
+                        {/* Price Skeleton */}
+                        <div className="w-28 h-12 bg-gray-300 rounded-2xl" />
 
-          </div>
-        </div>
-      ))
-    : featured.map((item) => (
-        <div
-          key={item.id}
-          className="relative rounded-3xl overflow-hidden h-80 flex flex-col justify-between shadow-md group"
-        >
+                      </div>
+                    </div>
+                  ))
+                  : featured.map((item) => (
+                    <div
+                      key={item.id}
+                      className="relative rounded-3xl overflow-hidden h-80 flex flex-col justify-between shadow-md group"
+                    >
 
-          {/* BACKGROUND IMAGE */}
-          {item.image && (
-            <div
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-              style={{
-                backgroundImage: `url(${getCloudinaryUrl(item.image, 800, 800)})`
-              }}
-            />
-          )}
+                      {/* BACKGROUND IMAGE */}
+                      {item.image && (
+                        <div
+                          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                          style={{
+                            backgroundImage: `url(${getCloudinaryUrl(item.image, 800, 800)})`
+                          }}
+                        />
+                      )}
 
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
 
-          {/* CONTENT */}
-          <div className="relative z-10 p-8 flex flex-col justify-between h-full text-white">
+                      {/* CONTENT */}
+                      <div className="relative z-10 p-8 flex flex-col justify-between h-full text-white">
 
-            {item.tag && (
-              <span className="bg-yellow-400 text-black text-sm font-semibold px-4 py-2 rounded-full w-fit">
-                {item.tag}
-              </span>
-            )}
+                        {item.tag && (
+                          <span className="bg-yellow-400 text-black text-sm font-semibold px-4 py-2 rounded-full w-fit">
+                            {item.tag}
+                          </span>
+                        )}
 
-            <h3 className="text-3xl font-bold leading-tight">
-              {item.title}
-            </h3>
+                        <h3 className="text-3xl font-bold leading-tight">
+                          {item.title}
+                        </h3>
 
-            {item.price && (
-              <div className="bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-2xl w-fit">
-                ₹{item.price}
-                <span className="block text-xs font-medium">
-                  Only
-                </span>
+                        {item.price && (
+                          <div className="bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-2xl w-fit">
+                            ₹{item.price}
+                            <span className="block text-xs font-medium">
+                              Only
+                            </span>
+                          </div>
+                        )}
+
+                      </div>
+
+                    </div>
+                  ))
+                }
+
+
               </div>
-            )}
+              {featured.length === 0 && (
+                <div className="flex flex-col items-center justify-center px-4 text-center">
+                  <div className="bg-red-50 p-6 rounded-full mb-6">
+                    <PackageOpen className="w-12 h-12 text-red-500" />
+                  </div>
 
-          </div>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    No Featured Items Found
+                  </h2>
 
-        </div>
-      ))
-  }
-  
-
-</div>
-{featured.length === 0 && (
-              <div className="flex flex-col items-center justify-center px-4 text-center">
-                <div className="bg-red-50 p-6 rounded-full mb-6">
-                  <PackageOpen className="w-12 h-12 text-red-500" />
+                  <p className="text-gray-500 mt-2 max-w-sm">
+                    It looks like there are no featured products available at the moment.
+                    Please check back later or explore other categories.
+                  </p>
                 </div>
-
-                <h2 className="text-xl font-semibold text-gray-800">
-                  No Featured Items Found
-                </h2>
-
-                <p className="text-gray-500 mt-2 max-w-sm">
-                  It looks like there are no featured products available at the moment.
-                  Please check back later or explore other categories.
-                </p>
-              </div>
-            )}
+              )}
             </div>
-            
+
           </section>
 
         </motion.div>
