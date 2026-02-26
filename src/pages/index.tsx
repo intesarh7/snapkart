@@ -41,7 +41,7 @@ export default function HomePage() {
   const [offers, setOffers] = useState<any[]>([]);
 
   const [showAddressPopup, setShowAddressPopup] = useState(false);
-
+const skeletonArray = Array.from({ length: 3 });
   const formatPrice = (amount: number) => {
     return Math.round(Number(amount || 0));
   };
@@ -53,6 +53,8 @@ export default function HomePage() {
     name: string;
     restaurantId: number;
   }
+
+ 
 
   useEffect(() => {
     const shouldShow = localStorage.getItem("showAddressPopup");
@@ -79,20 +81,29 @@ export default function HomePage() {
     image?: string | null;
   }
 
-  useEffect(() => {
+ useEffect(() => {
     const fetchFeatured = async () => {
-      const res = await fetch("/api/user/featured");
-      if (!res.ok) {
-        console.error("API Error:", res.status);
-        return;
-      }
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/user/featured");
 
-      setFeatured(data);
+        if (!res.ok) {
+          console.error("API Error:", res.status);
+          return;
+        }
+
+        const data: FeaturedItem[] = await res.json();
+        setFeatured(data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchFeatured();
   }, []);
+
+  
 
   useEffect(() => {
     fetch("/api/user/special-offer")
@@ -342,7 +353,7 @@ SCROLL ANIMATION VARIANT
                   setShowDropdown(true);
                 }}
                 onFocus={() => setShowDropdown(true)}
-                className="w-full rounded-full pl-12 pr-4 sm:pr-6 py-3 sm:py-4 text-black bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF6B00] focus:shadow-xl transition-all duration-300"/>
+                className="w-full rounded-full pl-12 pr-4 sm:pr-6 py-3 sm:py-4 text-black bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF6B00] focus:shadow-xl transition-all duration-300" />
 
               {/* Toggle Buttons */}
               <div className="flex justify-center gap-3 mt-4">
@@ -508,60 +519,84 @@ SCROLL ANIMATION VARIANT
         >
           <section className="py-12">
             <div className="max-w-7xl mx-auto px-6">
-              <div className="grid md:grid-cols-3 gap-8">
+             <div className="grid md:grid-cols-3 gap-8">
 
-                {featured.map((item) => (
-                  <div
-    key={item.id}
-    className="relative rounded-3xl overflow-hidden h-80 flex flex-col justify-between shadow-md group"
-  >
+  {loading
+    ? skeletonArray.map((_, index) => (
+        <div
+          key={index}
+          className="relative rounded-3xl overflow-hidden h-80 shadow-md bg-gray-200 animate-pulse"
+        >
+          {/* Image Skeleton */}
+          <div className="absolute inset-0 bg-gray-300" />
 
-    {/* BACKGROUND IMAGE */}
-    {item.image && (
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-        style={{
-          backgroundImage: `url(${getCloudinaryUrl(item.image, 800, 800)})`
-        }}
-      />
-    )}
+          <div className="relative z-10 p-8 flex flex-col justify-between h-full">
 
-    {/* DARK OVERLAY */}
-    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+            {/* Tag Skeleton */}
+            <div className="w-24 h-6 bg-gray-300 rounded-full" />
 
-    {/* CONTENT */}
-    <div className="relative z-10 p-8 flex flex-col justify-between h-full text-white">
-
-      {/* TAG */}
-      {item.tag && (
-        <span className="bg-yellow-400 text-black text-sm font-semibold px-4 py-2 rounded-full w-fit">
-          {item.tag}
-        </span>
-      )}
-
-      {/* TITLE */}
-      <h3 className="text-3xl font-bold leading-tight">
-        {item.title}
-      </h3>
-
-      {/* PRICE */}
-      {item.price && (
-        <div className="bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-2xl w-fit">
-          ₹{item.price}
-          <span className="block text-xs font-medium">
-            Only
-          </span>
-        </div>
-      )}
-
-    </div>
-
-  </div>
-                ))}
-
-              </div>
+            {/* Title Skeleton */}
+            <div className="space-y-3">
+              <div className="h-6 bg-gray-300 rounded w-3/4" />
+              <div className="h-6 bg-gray-300 rounded w-1/2" />
             </div>
-            {featured.length === 0 && (
+
+            {/* Price Skeleton */}
+            <div className="w-28 h-12 bg-gray-300 rounded-2xl" />
+
+          </div>
+        </div>
+      ))
+    : featured.map((item) => (
+        <div
+          key={item.id}
+          className="relative rounded-3xl overflow-hidden h-80 flex flex-col justify-between shadow-md group"
+        >
+
+          {/* BACKGROUND IMAGE */}
+          {item.image && (
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+              style={{
+                backgroundImage: `url(${getCloudinaryUrl(item.image, 800, 800)})`
+              }}
+            />
+          )}
+
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+
+          {/* CONTENT */}
+          <div className="relative z-10 p-8 flex flex-col justify-between h-full text-white">
+
+            {item.tag && (
+              <span className="bg-yellow-400 text-black text-sm font-semibold px-4 py-2 rounded-full w-fit">
+                {item.tag}
+              </span>
+            )}
+
+            <h3 className="text-3xl font-bold leading-tight">
+              {item.title}
+            </h3>
+
+            {item.price && (
+              <div className="bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-2xl w-fit">
+                ₹{item.price}
+                <span className="block text-xs font-medium">
+                  Only
+                </span>
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      ))
+  }
+  
+
+</div>
+{featured.length === 0 && (
               <div className="flex flex-col items-center justify-center px-4 text-center">
                 <div className="bg-red-50 p-6 rounded-full mb-6">
                   <PackageOpen className="w-12 h-12 text-red-500" />
@@ -577,6 +612,8 @@ SCROLL ANIMATION VARIANT
                 </p>
               </div>
             )}
+            </div>
+            
           </section>
 
         </motion.div>
@@ -832,361 +869,361 @@ SCROLL ANIMATION VARIANT
 
             {/* Products Grid */}
             {/* =============================== */}
-{/* 📱 Mobile Horizontal Scroll */}
-{/* =============================== */}
+            {/* 📱 Mobile Horizontal Scroll */}
+            {/* =============================== */}
 
-<div className="md:hidden overflow-x-auto pb-4 thin-scrollbar scroll-smooth">
-  <div className="flex gap-6 w-max">
+            <div className="md:hidden overflow-x-auto pb-4 thin-scrollbar scroll-smooth">
+              <div className="flex gap-6 w-max">
 
-    {filteredProducts.slice(0, 8).map((p) => {
+                {filteredProducts.slice(0, 8).map((p) => {
 
-      const hasVariants = p.variants && p.variants.length > 0;
+                  const hasVariants = p.variants && p.variants.length > 0;
 
-      const startingPrice = hasVariants
-        ? Math.min(...p.variants.map((v: any) => v.price))
-        : p.price;
+                  const startingPrice = hasVariants
+                    ? Math.min(...p.variants.map((v: any) => v.price))
+                    : p.price;
 
-      const startingFinalPrice = hasVariants
-        ? Math.min(...p.variants.map((v: any) => v.finalPrice || v.price))
-        : p.finalPrice;
+                  const startingFinalPrice = hasVariants
+                    ? Math.min(...p.variants.map((v: any) => v.finalPrice || v.price))
+                    : p.finalPrice;
 
-      const hasDiscount = startingFinalPrice < startingPrice;
+                  const hasDiscount = startingFinalPrice < startingPrice;
 
-      const discountPercent = hasDiscount
-        ? Math.round(
-            ((startingPrice - startingFinalPrice) / startingPrice) * 100
-          )
-        : 0;
+                  const discountPercent = hasDiscount
+                    ? Math.round(
+                      ((startingPrice - startingFinalPrice) / startingPrice) * 100
+                    )
+                    : 0;
 
-      const reviewCount = p.reviewCount || 0;
-      const deliveryTime =
-        p.restaurant?.deliveryTime || "30-40 mins";
+                  const reviewCount = p.reviewCount || 0;
+                  const deliveryTime =
+                    p.restaurant?.deliveryTime || "30-40 mins";
 
-      return (
-        <motion.div
-          key={p.id}
-          whileHover={{ y: -5 }}
-          className="min-w-65 bg-white border border-gray-200 rounded-2xl overflow-hidden transition hover:shadow-lg"
-        >
-          <Link href={`/user/products/${p.id}`}>
-            <div className="relative">
+                  return (
+                    <motion.div
+                      key={p.id}
+                      whileHover={{ y: -5 }}
+                      className="min-w-65 bg-white border border-gray-200 rounded-2xl overflow-hidden transition hover:shadow-lg"
+                    >
+                      <Link href={`/user/products/${p.id}`}>
+                        <div className="relative">
 
-              <Image
-                src={getCloudinaryUrl(p.image, 800, 500)}
-                alt={p.name}
-                width={800}
-                height={500}
-                className="w-full h-44 object-cover"
-                loading="lazy"
-              />
+                          <Image
+                            src={getCloudinaryUrl(p.image, 800, 500)}
+                            alt={p.name}
+                            width={800}
+                            height={500}
+                            className="w-full h-44 object-cover"
+                            loading="lazy"
+                          />
 
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {p.offerType && p.offerValue > 0 && (
-                  <span className="bg-[#FF4D00] text-white text-xs px-3 py-1 rounded-md font-medium shadow">
-                    {p.offerType.toLowerCase() === "percentage"
-                      ? `OFFER ${p.offerValue}%`
-                      : `OFFER ₹${p.offerValue}`}
-                  </span>
-                )}
+                          <div className="absolute top-4 left-4 flex flex-col gap-2">
+                            {p.offerType && p.offerValue > 0 && (
+                              <span className="bg-[#FF4D00] text-white text-xs px-3 py-1 rounded-md font-medium shadow">
+                                {p.offerType.toLowerCase() === "percentage"
+                                  ? `OFFER ${p.offerValue}%`
+                                  : `OFFER ₹${p.offerValue}`}
+                              </span>
+                            )}
 
-                {p.extraType && p.extraValue > 0 && (
-                  <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-md font-medium shadow">
-                    {p.extraType.toLowerCase() === "percentage"
-                      ? `BINGO OFFER ${p.extraValue}%`
-                      : `BINGO OFFER ₹${p.extraValue}`}
-                  </span>
-                )}
+                            {p.extraType && p.extraValue > 0 && (
+                              <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-md font-medium shadow">
+                                {p.extraType.toLowerCase() === "percentage"
+                                  ? `BINGO OFFER ${p.extraValue}%`
+                                  : `BINGO OFFER ₹${p.extraValue}`}
+                              </span>
+                            )}
+                          </div>
+
+                        </div>
+
+                        <div className="p-4">
+
+                          <div className="flex items-center text-sm text-gray-600 gap-3 mb-2">
+                            <div className="flex items-center gap-1 text-yellow-500">
+                              <Star size={14} fill="#FACC15" />
+                              <span className="font-medium text-gray-800">
+                                {p.rating?.toFixed(1) || "0.0"}
+                              </span>
+                              <span className="text-gray-500">
+                                ({reviewCount})
+                              </span>
+                            </div>
+
+                            <span>• {deliveryTime}</span>
+                          </div>
+
+                          <h3 className="font-semibold text-lg mb-1 hover:text-[#FF6B00] transition">
+                            {p.name}
+                          </h3>
+
+                          <p className="text-sm text-gray-500">
+                            {p.category}
+                          </p>
+
+                          <p className="text-sm text-gray-500 mt-1">
+                            {p.restaurant?.name}
+                          </p>
+
+                          <p className="flex items-center text-gray-500 text-sm mt-2">
+                            <MapPin size={14} className="mr-1" />
+                            {p.restaurant?.address || "Location not available"}
+                          </p>
+
+                          {hasVariants && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              {p.variants.length} Sizes Available
+                            </p>
+                          )}
+
+                          <div className="flex items-center justify-between mt-4">
+
+                            <div>
+                              {hasDiscount && (
+                                <span className="text-gray-400 line-through text-sm mr-2">
+                                  ₹{formatPrice(startingPrice)}
+                                </span>
+                              )}
+
+                              <span className="text-lg font-bold text-[#FF6B00]">
+                                ₹{formatPrice(startingFinalPrice)}
+                              </span>
+
+                              {hasDiscount && (
+                                <span className="text-green-600 text-xs ml-2 font-medium">
+                                  {discountPercent}% OFF
+                                </span>
+                              )}
+
+                              {hasVariants && (
+                                <span className="text-xs text-gray-500 ml-2">
+                                  (Starts from)
+                                </span>
+                              )}
+                            </div>
+
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                addToCart({
+                                  id: p.id,
+                                  name: p.name,
+                                  price: hasVariants ? p.variants[0].price : startingPrice,
+                                  finalPrice: hasVariants
+                                    ? p.variants[0].finalPrice || p.variants[0].price
+                                    : startingFinalPrice,
+                                  image: p.image,
+                                  restaurantId: p.restaurantId,
+                                  variantId: hasVariants ? p.variants[0].id : null,
+                                  variantName: hasVariants ? p.variants[0].name : null,
+                                  hasVariants: hasVariants,
+                                  extras: [],
+                                  variants: p.variants || [],
+                                  availableExtras: p.extras || [],
+                                });
+
+                                toast.success("Added to cart 🛒");
+                              }}
+                              className="flex items-center gap-2 bg-[#FF6B00] text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition text-sm"
+                            >
+                              <ShoppingCart size={16} />
+                              Add
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+
               </div>
-
             </div>
 
-            <div className="p-4">
 
-            <div className="flex items-center text-sm text-gray-600 gap-3 mb-2">
-              <div className="flex items-center gap-1 text-yellow-500">
-                <Star size={14} fill="#FACC15" />
-                <span className="font-medium text-gray-800">
-                  {p.rating?.toFixed(1) || "0.0"}
-                </span>
-                <span className="text-gray-500">
-                  ({reviewCount})
-                </span>
-              </div>
+            {/* =============================== */}
+            {/* 🖥 Desktop & Tablet Grid */}
+            {/* =============================== */}
 
-              <span>• {deliveryTime}</span>
-            </div>
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
-            <h3 className="font-semibold text-lg mb-1 hover:text-[#FF6B00] transition">
-              {p.name}
-            </h3>
+              {filteredProducts.slice(0, 6).map((p) => {
 
-            <p className="text-sm text-gray-500">
-              {p.category}
-            </p>
+                const hasVariants = p.variants && p.variants.length > 0;
 
-            <p className="text-sm text-gray-500 mt-1">
-              {p.restaurant?.name}
-            </p>
+                const startingPrice = hasVariants
+                  ? Math.min(...p.variants.map((v: any) => v.price))
+                  : p.price;
 
-            <p className="flex items-center text-gray-500 text-sm mt-2">
-              <MapPin size={14} className="mr-1" />
-              {p.restaurant?.address || "Location not available"}
-            </p>
+                const startingFinalPrice = hasVariants
+                  ? Math.min(...p.variants.map((v: any) => v.finalPrice || v.price))
+                  : p.finalPrice;
 
-            {hasVariants && (
-              <p className="text-xs text-gray-500 mt-2">
-                {p.variants.length} Sizes Available
-              </p>
-            )}
+                const hasDiscount = startingFinalPrice < startingPrice;
 
-            <div className="flex items-center justify-between mt-4">
+                const discountPercent = hasDiscount
+                  ? Math.round(
+                    ((startingPrice - startingFinalPrice) / startingPrice) * 100
+                  )
+                  : 0;
 
-              <div>
-                {hasDiscount && (
-                  <span className="text-gray-400 line-through text-sm mr-2">
-                    ₹{formatPrice(startingPrice)}
-                  </span>
-                )}
+                const reviewCount = p.reviewCount || 0;
+                const deliveryTime =
+                  p.restaurant?.deliveryTime || "30-40 mins";
 
-                <span className="text-lg font-bold text-[#FF6B00]">
-                  ₹{formatPrice(startingFinalPrice)}
-                </span>
+                return (
+                  <motion.div
+                    key={p.id}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="show"
+                    whileHover={{ y: -5 }}
+                    className="bg-white border border-gray-200 rounded-2xl overflow-hidden transition hover:shadow-lg"
+                  >
+                    <Link href={`/user/products/${p.id}`}>
 
-                {hasDiscount && (
-                  <span className="text-green-600 text-xs ml-2 font-medium">
-                    {discountPercent}% OFF
-                  </span>
-                )}
+                      <div className="relative">
 
-                {hasVariants && (
-                  <span className="text-xs text-gray-500 ml-2">
-                    (Starts from)
-                  </span>
-                )}
-              </div>
+                        <Image
+                          src={getCloudinaryUrl(p.image, 800, 500)}
+                          alt={p.name}
+                          width={800}
+                          height={500}
+                          className="w-full h-52 object-cover"
+                          loading="lazy"
+                        />
 
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                        <div className="absolute top-4 left-4 flex flex-col gap-2">
 
-                  addToCart({
-                    id: p.id,
-                    name: p.name,
-                    price: hasVariants ? p.variants[0].price : startingPrice,
-                    finalPrice: hasVariants
-                      ? p.variants[0].finalPrice || p.variants[0].price
-                      : startingFinalPrice,
-                    image: p.image,
-                    restaurantId: p.restaurantId,
-                    variantId: hasVariants ? p.variants[0].id : null,
-                    variantName: hasVariants ? p.variants[0].name : null,
-                    hasVariants: hasVariants,
-                    extras: [],
-                    variants: p.variants || [],
-                    availableExtras: p.extras || [],
-                  });
+                          {p.offerType && p.offerValue > 0 && (
+                            <span className="bg-[#FF4D00] text-white text-xs px-3 py-1 rounded-md font-medium shadow">
+                              {p.offerType.toLowerCase() === "percentage"
+                                ? `OFFER ${p.offerValue}%`
+                                : `OFFER ₹${p.offerValue}`}
+                            </span>
+                          )}
 
-                  toast.success("Added to cart 🛒");
-                }}
-                className="flex items-center gap-2 bg-[#FF6B00] text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition text-sm"
-              >
-                <ShoppingCart size={16} />
-                Add
-              </button>
+                          {p.extraType && p.extraValue > 0 && (
+                            <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-md font-medium shadow">
+                              {p.extraType.toLowerCase() === "percentage"
+                                ? `BINGO OFFER ${p.extraValue}%`
+                                : `BINGO OFFER ₹${p.extraValue}`}
+                            </span>
+                          )}
 
-            </div>
+                        </div>
 
-          </div>
+                      </div>
 
-          </Link>
-        </motion.div>
-      );
-    })}
+                      <div className="p-5">
 
-  </div>
-</div>
+                        <div className="flex items-center text-sm text-gray-600 gap-3 mb-2">
+                          <div className="flex items-center gap-1 text-yellow-500">
+                            <Star size={14} fill="#FACC15" />
+                            <span className="font-medium text-gray-800">
+                              {p.rating?.toFixed(1) || "0.0"}
+                            </span>
+                            <span className="text-gray-500">
+                              ({reviewCount})
+                            </span>
+                          </div>
 
+                          <span>• {deliveryTime}</span>
+                        </div>
 
-{/* =============================== */}
-{/* 🖥 Desktop & Tablet Grid */}
-{/* =============================== */}
+                        <h3 className="font-semibold text-lg mb-1 hover:text-[#FF6B00] transition">
+                          {p.name}
+                        </h3>
 
-<div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <p className="text-sm text-gray-500">
+                          {p.category}
+                        </p>
 
-  {filteredProducts.slice(0, 6).map((p) => {
+                        <p className="text-sm text-gray-500 mt-1">
+                          {p.restaurant?.name}
+                        </p>
 
-    const hasVariants = p.variants && p.variants.length > 0;
+                        <p className="flex items-center text-gray-500 text-sm mt-2">
+                          <MapPin size={14} className="mr-1" />
+                          {p.restaurant?.address || "Location not available"}
+                        </p>
 
-    const startingPrice = hasVariants
-      ? Math.min(...p.variants.map((v: any) => v.price))
-      : p.price;
+                        {hasVariants && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            {p.variants.length} Sizes Available
+                          </p>
+                        )}
 
-    const startingFinalPrice = hasVariants
-      ? Math.min(...p.variants.map((v: any) => v.finalPrice || v.price))
-      : p.finalPrice;
+                        <div className="flex items-center justify-between mt-4">
 
-    const hasDiscount = startingFinalPrice < startingPrice;
+                          <div>
+                            {hasDiscount && (
+                              <span className="text-gray-400 line-through text-sm mr-2">
+                                ₹{formatPrice(startingPrice)}
+                              </span>
+                            )}
 
-    const discountPercent = hasDiscount
-      ? Math.round(
-          ((startingPrice - startingFinalPrice) / startingPrice) * 100
-        )
-      : 0;
+                            <span className="text-lg font-bold text-[#FF6B00]">
+                              ₹{formatPrice(startingFinalPrice)}
+                            </span>
 
-    const reviewCount = p.reviewCount || 0;
-    const deliveryTime =
-      p.restaurant?.deliveryTime || "30-40 mins";
+                            {hasDiscount && (
+                              <span className="text-green-600 text-xs ml-2 font-medium">
+                                {discountPercent}% OFF
+                              </span>
+                            )}
 
-    return (
-      <motion.div
-        key={p.id}
-        variants={fadeUp}
-        initial="hidden"
-        whileInView="show"
-        whileHover={{ y: -5 }}
-        className="bg-white border border-gray-200 rounded-2xl overflow-hidden transition hover:shadow-lg"
-      >
-        <Link href={`/user/products/${p.id}`}>
+                            {hasVariants && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                (Starts from)
+                              </span>
+                            )}
+                          </div>
 
-          <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
 
-            <Image
-              src={getCloudinaryUrl(p.image, 800, 500)}
-              alt={p.name}
-              width={800}
-              height={500}
-              className="w-full h-52 object-cover"
-              loading="lazy"
-            />
+                              addToCart({
+                                id: p.id,
+                                name: p.name,
+                                price: hasVariants ? p.variants[0].price : startingPrice,
+                                finalPrice: hasVariants
+                                  ? p.variants[0].finalPrice || p.variants[0].price
+                                  : startingFinalPrice,
+                                image: p.image,
+                                restaurantId: p.restaurantId,
+                                variantId: hasVariants ? p.variants[0].id : null,
+                                variantName: hasVariants ? p.variants[0].name : null,
+                                hasVariants: hasVariants,
+                                extras: [],
+                                variants: p.variants || [],
+                                availableExtras: p.extras || [],
+                              });
 
-            <div className="absolute top-4 left-4 flex flex-col gap-2">
+                              toast.success("Added to cart 🛒");
+                            }}
+                            className="flex items-center gap-2 bg-[#FF6B00] text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition text-sm"
+                          >
+                            <ShoppingCart size={16} />
+                            Add
+                          </button>
 
-              {p.offerType && p.offerValue > 0 && (
-                <span className="bg-[#FF4D00] text-white text-xs px-3 py-1 rounded-md font-medium shadow">
-                  {p.offerType.toLowerCase() === "percentage"
-                    ? `OFFER ${p.offerValue}%`
-                    : `OFFER ₹${p.offerValue}`}
-                </span>
-              )}
+                        </div>
 
-              {p.extraType && p.extraValue > 0 && (
-                <span className="bg-red-600 text-white text-xs px-3 py-1 rounded-md font-medium shadow">
-                  {p.extraType.toLowerCase() === "percentage"
-                    ? `BINGO OFFER ${p.extraValue}%`
-                    : `BINGO OFFER ₹${p.extraValue}`}
-                </span>
-              )}
+                      </div>
 
-            </div>
-
-          </div>
-
-          <div className="p-5">
-
-            <div className="flex items-center text-sm text-gray-600 gap-3 mb-2">
-              <div className="flex items-center gap-1 text-yellow-500">
-                <Star size={14} fill="#FACC15" />
-                <span className="font-medium text-gray-800">
-                  {p.rating?.toFixed(1) || "0.0"}
-                </span>
-                <span className="text-gray-500">
-                  ({reviewCount})
-                </span>
-              </div>
-
-              <span>• {deliveryTime}</span>
-            </div>
-
-            <h3 className="font-semibold text-lg mb-1 hover:text-[#FF6B00] transition">
-              {p.name}
-            </h3>
-
-            <p className="text-sm text-gray-500">
-              {p.category}
-            </p>
-
-            <p className="text-sm text-gray-500 mt-1">
-              {p.restaurant?.name}
-            </p>
-
-            <p className="flex items-center text-gray-500 text-sm mt-2">
-              <MapPin size={14} className="mr-1" />
-              {p.restaurant?.address || "Location not available"}
-            </p>
-
-            {hasVariants && (
-              <p className="text-xs text-gray-500 mt-2">
-                {p.variants.length} Sizes Available
-              </p>
-            )}
-
-            <div className="flex items-center justify-between mt-4">
-
-              <div>
-                {hasDiscount && (
-                  <span className="text-gray-400 line-through text-sm mr-2">
-                    ₹{formatPrice(startingPrice)}
-                  </span>
-                )}
-
-                <span className="text-lg font-bold text-[#FF6B00]">
-                  ₹{formatPrice(startingFinalPrice)}
-                </span>
-
-                {hasDiscount && (
-                  <span className="text-green-600 text-xs ml-2 font-medium">
-                    {discountPercent}% OFF
-                  </span>
-                )}
-
-                {hasVariants && (
-                  <span className="text-xs text-gray-500 ml-2">
-                    (Starts from)
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  addToCart({
-                    id: p.id,
-                    name: p.name,
-                    price: hasVariants ? p.variants[0].price : startingPrice,
-                    finalPrice: hasVariants
-                      ? p.variants[0].finalPrice || p.variants[0].price
-                      : startingFinalPrice,
-                    image: p.image,
-                    restaurantId: p.restaurantId,
-                    variantId: hasVariants ? p.variants[0].id : null,
-                    variantName: hasVariants ? p.variants[0].name : null,
-                    hasVariants: hasVariants,
-                    extras: [],
-                    variants: p.variants || [],
-                    availableExtras: p.extras || [],
-                  });
-
-                  toast.success("Added to cart 🛒");
-                }}
-                className="flex items-center gap-2 bg-[#FF6B00] text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition text-sm"
-              >
-                <ShoppingCart size={16} />
-                Add
-              </button>
+                    </Link>
+                  </motion.div>
+                );
+              })}
 
             </div>
-
-          </div>
-
-        </Link>
-      </motion.div>
-    );
-  })}
-
-</div>
 
           </div>
         </section>
