@@ -35,7 +35,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [timeLeft, setTimeLeft] = useState("");
   const [featured, setFeatured] = useState<FeaturedItem[]>([]);
@@ -43,7 +44,6 @@ export default function HomePage() {
 
   const [showAddressPopup, setShowAddressPopup] = useState(false);
   const skeletonArray = Array.from({ length: 3 });
-  const categorySkeleton = Array.from({ length: 6 });
   const formatPrice = (amount: number) => {
     return Math.round(Number(amount || 0));
   };
@@ -482,35 +482,18 @@ SCROLL ANIMATION VARIANT
               className="mt-10"
             >
               <div className="flex flex-wrap justify-center gap-8">
-
-                {/* ================= SKELETON ================= */}
-                {categoriesLoading &&
-                  categorySkeleton.map((_, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col items-center animate-pulse"
-                    >
-                      {/* Circle Skeleton */}
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gray-300 rounded-full shadow-md" />
-
-                      {/* Text Skeleton */}
-                      <div className="mt-3 sm:mt-4 w-20 h-4 bg-gray-300 rounded" />
-                    </div>
-                  ))}
-
-                {/* ================= REAL DATA ================= */}
-                {!categoriesLoading &&
-                  categories.map((cat: any) => (
-                    <div
-                      key={cat.id}
-                      onClick={() =>
-                        router.push(
-                          `/user/restaurants/${cat.restaurantId}?categoryId=${cat.id}`
-                        )
-                      }
-                      className="flex flex-col items-center group cursor-pointer"
-                    >
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out group-hover:scale-110 group-hover:shadow-xl active:scale-95">
+                {categories.map((cat: any) => (
+                  <div
+                    key={cat.id}
+                    onClick={() =>
+                      router.push(
+                        `/user/restaurants/${cat.restaurantId}?categoryId=${cat.id}`
+                      )
+                    }
+                    className="flex flex-col items-center group cursor-pointer"
+                  >
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out group-hover:scale-110 group-hover:shadow-xl active:scale-95">
+                      <span className="text-lg font-bold text-gray-700 p-2">
                         <Image
                           src={getCloudinaryUrl(cat.image, 200, 200)}
                           alt={cat.name}
@@ -518,14 +501,14 @@ SCROLL ANIMATION VARIANT
                           height={100}
                           className="object-cover rounded-full"
                         />
-                      </div>
-
-                      <p className="mt-3 sm:mt-4 text-white font-semibold text-base sm:text-lg md:text-xl text-center leading-snug">
-                        {cat.name}
-                      </p>
+                      </span>
                     </div>
-                  ))}
 
+                    <p className="mt-3 sm:mt-4 text-white font-semibold text-base sm:text-lg md:text-xl text-center leading-snug">
+                      {cat.name}
+                    </p>
+                  </div>
+                ))}
               </div>
             </motion.div>
           </div>
